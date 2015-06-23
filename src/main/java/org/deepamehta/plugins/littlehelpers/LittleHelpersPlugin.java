@@ -1,5 +1,6 @@
 package org.deepamehta.plugins.littlehelpers;
 
+import de.deepamehta.core.RelatedTopic;
 import java.util.logging.Logger;
 import java.util.List;
 
@@ -10,11 +11,14 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 
 import de.deepamehta.core.Topic;
+import de.deepamehta.core.TopicType;
 
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
 import de.deepamehta.plugins.workspaces.service.WorkspacesService;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import javax.ws.rs.core.MediaType;
 import org.deepamehta.plugins.littlehelpers.service.LittleHelpersService;
 
@@ -49,11 +53,20 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
         List<SuggestionViewModel> suggestions = new ArrayList<SuggestionViewModel>();
+        // three explicit search for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
         List<Topic> results = getTopicSuggestions(query, "dm4.topicmaps.name");
         results.addAll(getTopicSuggestions(query, "dm4.notes.title"));
         results.addAll(getTopicSuggestions(query, "dm4.accesscontrol.username"));
+        // append the results of a generic fulltext search
+        List<Topic> naives = dms.searchTopics(query + "*", null);
+        if (naives != null) {
+            log.info("Naive search " + naives.size() + " length");
+            results.addAll(naives);
+        }
         // 
-        for (Topic t : results) {
+        log.info("> Checking for searchable units.. in " + results.size() );
+        List<Topic> new_results = findSearchableUnits(results);
+        for (Topic t : new_results) {
             log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" + wsService.getAssignedWorkspace(t.getId())+ ")");
             suggestions.add(new SuggestionViewModel(t, wsService.getAssignedWorkspace(t.getId())));
         }
@@ -67,6 +80,48 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     public List<Topic> getTopicSuggestions(@PathParam("input") String query, 
             @PathParam("typeUri") String typeUri) {
         return dms.searchTopics(query + "*", typeUri);
+    }
+
+    // --
+    // --- Helper Methods taken from the WebclientPlugin.java by Jörg Richter
+    // --
+
+    private List<Topic> findSearchableUnits(List<? extends Topic> topics) {
+        List<Topic> searchableUnits = new ArrayList();
+        for (Topic topic : topics) {
+            if (searchableAsUnit(topic)) {
+                searchableUnits.add(topic);
+            } else {
+                List<RelatedTopic> parentTopics = topic.getRelatedTopics((String) null, "dm4.core.child",
+                    "dm4.core.parent", null, 0).getItems();
+                if (parentTopics.isEmpty()) {
+                    searchableUnits.add(topic);
+                } else {
+                    searchableUnits.addAll(findSearchableUnits(parentTopics));
+                }
+            }
+        }
+        return searchableUnits;
+    }
+
+    private boolean searchableAsUnit(Topic topic) {
+        TopicType topicType = dms.getTopicType(topic.getTypeUri());
+        Boolean searchableAsUnit = (Boolean) getViewConfig(topicType, "searchable_as_unit");
+        return searchableAsUnit != null ? searchableAsUnit.booleanValue() : false;  // default is false
+    }
+
+    /**
+     * Read out a view configuration setting.
+     * <p>
+     * Compare to client-side counterpart: function get_view_config() in webclient.js
+     *
+     * @param   topicType   The topic type whose view configuration is read out.
+     * @param   setting     Last component of the setting URI, e.g. "icon".
+     *
+     * @return  The setting value, or <code>null</code> if there is no such setting
+     */
+    private Object getViewConfig(TopicType topicType, String setting) {
+        return topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient." + setting);
     }
 
 }
