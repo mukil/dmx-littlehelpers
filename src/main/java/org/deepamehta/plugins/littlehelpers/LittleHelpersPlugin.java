@@ -15,17 +15,14 @@ import de.deepamehta.core.TopicType;
 
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
-import de.deepamehta.plugins.workspaces.service.WorkspacesService;
+import de.deepamehta.plugins.workspaces.WorkspacesService;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import javax.ws.rs.core.MediaType;
-import org.deepamehta.plugins.littlehelpers.service.LittleHelpersService;
 
 
 /**
  * @author Malte Reißig (<malte@mikromedia.de>)
- * @website http://github.com/mukil/dm4-helpers
+ * @website http://github.com/mukil/dm4-littlehelpers
  * @version 0.1.0 - compatible with DeepaMehta 4.5
  *
  */
@@ -43,8 +40,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     private final static String PARENT_URI = "dm4.core.parent";
     private final static String AGGREGATION = "dm4.core.aggregation"; **/
 
-    @Inject
-    WorkspacesService wsService;
+    @Inject WorkspacesService wsService;
     
     @GET
     @Override
@@ -87,7 +83,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     // --
 
     private List<Topic> findSearchableUnits(List<? extends Topic> topics) {
-        List<Topic> searchableUnits = new ArrayList();
+        List<Topic> searchableUnits = new ArrayList<Topic>();
         for (Topic topic : topics) {
             if (searchableAsUnit(topic)) {
                 searchableUnits.add(topic);

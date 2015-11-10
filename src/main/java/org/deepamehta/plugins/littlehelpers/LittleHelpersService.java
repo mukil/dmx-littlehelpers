@@ -1,8 +1,7 @@
-package org.deepamehta.plugins.littlehelpers.service;
+package org.deepamehta.plugins.littlehelpers;
 
 
 import de.deepamehta.core.Topic;
-import de.deepamehta.core.service.PluginService;
 import java.util.List;
 import org.deepamehta.plugins.littlehelpers.SuggestionViewModel;
 
@@ -15,7 +14,7 @@ import org.deepamehta.plugins.littlehelpers.SuggestionViewModel;
  *
  */
 
-public interface LittleHelpersService extends PluginService {
+public interface LittleHelpersService {
 
     List<SuggestionViewModel> getTopicSuggestions(String query);
     
