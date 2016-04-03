@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
@@ -44,6 +46,9 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
 
     private final static String PROP_URI_CREATED  = "dm4.time.created";
     private final static String PROP_URI_MODIFIED = "dm4.time.modified";
+
+    // --- Custom Type Cache
+    private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
 
     /** private final static String CHILD_URI = "dm4.core.child";
     private final static String PARENT_URI = "dm4.core.parent";
@@ -85,7 +90,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         log.info("Suggesting " + suggestions.size() + " topics for input: " + query);
         return suggestions;
     }
-    
+
     @GET
     @Override
     @Path("/suggest/topics/{input}/{typeUri}")
@@ -104,49 +109,38 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
      * Fetches standard topics by time-range and time-value (created || modified).
      */
     @GET
-    @Path("/by_time/{time_value}/{from}/{to}")
+    @Path("/by_time/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public String getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("from") long from, @PathParam("to") long to) {
+    public String getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+        @PathParam("to") long to) {
         JSONArray results = new JSONArray();
         try {
             // 1) Fetch all topics in either "created" or "modified"-timestamp timerange
-            log.info("Fetching Topics in timerange from \"" + from + "\" to \"" + to + "\"");
-            ArrayList<Topic> items_in_range = new ArrayList<Topic>(); // items of interest
-            Collection<Topic> topics_in_range = null; // all topics
-            if (type.equals("created")) {
-                topics_in_range = timeService.getTopicsByCreationTime(from, to);
-            } else if (type.equals("modified")) {
-                topics_in_range = timeService.getTopicsByModificationTime(from, to);
-            } else {
-                return "Wrong parameter: set time_value to \"created\" or \"modified\"";
-            }
-            if (topics_in_range.isEmpty()) log.info("getStandardTopicsInTimeRange("+type+") got NO result.");
-            Iterator<Topic> resultset = topics_in_range.iterator();
+            log.info("Fetching Standard Topics (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
+            ArrayList<Topic> standardTopics = new ArrayList<Topic>(); // items of interest
+            Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
+            if (overallTopics.isEmpty()) log.info("getStandardTopicsInTimeRange("+type+") got NO result.");
+            Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
-                if (in_question.getTypeUri().equals("dm4.notes.note")) {
-                    items_in_range.add(in_question);
-                } else if (in_question.getTypeUri().equals("dm4.files.file")) {
-                    items_in_range.add(in_question);
-                } else if (in_question.getTypeUri().equals("dm4.files.folder")) {
-                    items_in_range.add(in_question);
-                } else if (in_question.getTypeUri().equals("dm4.contacts.person")) {
-                    items_in_range.add(in_question);
-                } else if (in_question.getTypeUri().equals("dm4.contacts.institution")) {
-                    items_in_range.add(in_question);
-                } else if (in_question.getTypeUri().equals("dm4.webbrowser.web_resource")) {
-                    items_in_range.add(in_question);
+                if (in_question.getTypeUri().equals("dm4.notes.note") ||
+                    in_question.getTypeUri().equals("dm4.files.file") ||
+                    in_question.getTypeUri().equals("dm4.files.folder") ||
+                    in_question.getTypeUri().equals("dm4.contacts.person") ||
+                    in_question.getTypeUri().equals("dm4.contacts.institution") ||
+                    in_question.getTypeUri().equals("dm4.webbrowser.web_resource")) {
+                    standardTopics.add(in_question);
                 } else {
                     // log.info("> Result \"" +in_question.getSimpleValue()+ "\" (" +in_question.getTypeUri()+ ")");
                 }
             }
-            log.info("> Fetched " +items_in_range.size()+ " elements (" + from + ", " + to + ")" + " by time");
+            log.info("Topics " + type + " in timerange query found " + standardTopics.size() + " standard topics");
             // 2) Sort all fetched items by their "created" or "modified" timestamps
             ArrayList<Topic> in_memory_resources = null;
             if (type.equals("created")) {
-                in_memory_resources = getTopicListSortedByCreationTime(items_in_range);
+                in_memory_resources = getTopicListSortedByCreationTime(standardTopics);
             } else if (type.equals("modified")) {
-                in_memory_resources = getTopicListSortedByModificationTime(items_in_range);
+                in_memory_resources = getTopicListSortedByModificationTime(standardTopics);
             }
             // 3) Prepare the notes page-results view-model (per type of interest)
             for (Topic item : in_memory_resources) {
@@ -154,6 +148,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
                     item.loadChildTopics();
                     enrichTopicModelAboutCreationTimestamp(item);
                     enrichTopicModelAboutModificationTimestamp(item);
+                    enrichTopicModelAboutIconConfigURL(item);
                     results.put(item.toJSON());
                 } catch (RuntimeException rex) {
                     log.warning("Could not add fetched item to results, caused by: " + rex.getMessage());
@@ -169,17 +164,18 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
      * Getting composites of all standard topics in given timerange.
      */
     @GET
-    @Path("/all/index/{from}/{to}")
+    @Path("/timeindex/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public String getStandardIndexForTimeRange(@PathParam("from") long from, @PathParam("to") long to) {
+    public String getTopicIndexForTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+        @PathParam("to") long to) {
         //
         JSONArray results = new JSONArray();
         try {
+            log.info("Populating Topic Index (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
             // 1) Fetch Resultset of Resources
-            log.info("Loadings all standard topic composites in timerange from \"" + from + "\" to \"" + to + "\"");
-            ArrayList<Topic> all_in_range = new ArrayList<Topic>();
-            Collection<Topic> topics_in_range = timeService.getTopicsByCreationTime(from, to);
-            Iterator<Topic> resultset = topics_in_range.iterator();
+            ArrayList<Topic> standardTopics = new ArrayList<Topic>();
+            Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
+            Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
                 if (in_question.getTypeUri().equals("dm4.notes.note") ||
@@ -189,13 +185,13 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
                     in_question.getTypeUri().equals("dm4.contacts.institution") ||
                     in_question.getTypeUri().equals("dm4.webbrowser.web_resource")) {
                     // log.info("> " +in_question.getSimpleValue()+ " of type \"" +in_question.getTypeUri()+ "\"");
-                    all_in_range.add(in_question);
+                    standardTopics.add(in_question);
                 }
             }
-            log.info("> Fetched  " +all_in_range.size()+ " items (" + from + ", " + to + ")" + " by time");
+            log.info(type+" Topic Index for timerange query found " + standardTopics.size() + " standard topics (" + overallTopics.size() + " overall)");
             // 2) Sort and fetch resources
             // ArrayList<RelatedTopic> in_memory_resources = getResultSetSortedByCreationTime(all_resources);
-            for (Topic item : all_in_range) { // 2) prepare resource items
+            for (Topic item : standardTopics) { // 2) prepare resource items
                 // 3) Prepare the notes page-results view-model
                 item.loadChildTopics();
                 enrichTopicModelAboutCreationTimestamp(item);
@@ -208,7 +204,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         return results.toString();
     }
 
-    public ArrayList<Topic> getTopicListSortedByCreationTime (ArrayList<Topic> all) {
+    public ArrayList<Topic> getTopicListSortedByCreationTime(ArrayList<Topic> all) {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
@@ -227,7 +223,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         return all;
     }
 
-    public ArrayList<Topic> getTopicListSortedByModificationTime (ArrayList<Topic> all) {
+    public ArrayList<Topic> getTopicListSortedByModificationTime(ArrayList<Topic> all) {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
@@ -248,13 +244,42 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
 
     // --- Private Utility Methods
 
-    private void enrichTopicModelAboutCreationTimestamp (Topic resource) {
+    private Collection<Topic> fetchAllTopicsInTimerange(String type, long since, long to) {
+        Collection<Topic> topics = null;
+        if (type.equals("created")) {
+            topics = timeService.getTopicsByCreationTime(since, to);
+            log.fine("> Queried " +topics.size()+ " elements CREATED since: " + new Date(since) + " and " + new Date(to));
+        } else if (type.equals("modified")) {
+            topics = timeService.getTopicsByModificationTime(since, to);
+            log.fine("> Queried " +topics.size()+ " elements MODIFIED since: " + new Date(since) + " and " + new Date(to));
+        } else {
+            throw new RuntimeException("Wrong parameter: set time_value either to \"created\" or \"modified\"");
+        }
+        return topics;
+    }
+
+    private void enrichTopicModelAboutIconConfigURL(Topic element) {
+        TopicType topicType = null;
+        if (viewConfigTypeCache.containsKey(element.getTypeUri())) {
+            topicType = viewConfigTypeCache.get(element.getTypeUri());
+        } else {
+            topicType = dms.getTopicType(element.getTypeUri());
+            viewConfigTypeCache.put(element.getTypeUri(), topicType);
+        }
+        Object iconUrl = getViewConfig(topicType, "icon");
+        if (iconUrl != null) {
+            ChildTopicsModel resourceModel = element.getChildTopics().getModel();
+            resourceModel.put("dm4.webclient.icon", iconUrl.toString());
+        }
+    }
+
+    private void enrichTopicModelAboutCreationTimestamp(Topic resource) {
         long created = timeService.getCreationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.put(PROP_URI_CREATED, created);
     }
 
-    private void enrichTopicModelAboutModificationTimestamp (Topic resource) {
+    private void enrichTopicModelAboutModificationTimestamp(Topic resource) {
         long created = timeService.getModificationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.put(PROP_URI_MODIFIED, created);

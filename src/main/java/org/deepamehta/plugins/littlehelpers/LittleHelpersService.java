@@ -22,8 +22,8 @@ public interface LittleHelpersService {
 
     ArrayList<Topic> getTopicListSortedByModificationTime(ArrayList<Topic> list);
 
-    String getStandardTopicsInTimeRange(String type, long from, long to);
+    String getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
 
-    String getStandardIndexForTimeRange(long from, long to);
+    String getTopicIndexForTimeRange(String modifiedOrCreated, long from, long to);
 
 }
