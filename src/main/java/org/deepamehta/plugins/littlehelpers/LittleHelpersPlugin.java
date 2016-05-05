@@ -59,9 +59,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
 
 
 
-    // --
     // --- Stableviews Utility Service
-    // --
 
     @GET
     @Override
@@ -101,9 +99,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
 
 
 
-    // --
     // --- Timeline Utility Service (Formerly eduZEN Notizen)
-    // --
 
     /**
      * Fetches standard topics by time-range and time-value (created || modified).
