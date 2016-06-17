@@ -16,8 +16,8 @@ import de.deepamehta.core.model.ChildTopicsModel;
 
 import de.deepamehta.core.osgi.PluginActivator;
 import de.deepamehta.core.service.Inject;
-import de.deepamehta.plugins.time.TimeService;
-import de.deepamehta.plugins.workspaces.WorkspacesService;
+import de.deepamehta.time.TimeService;
+import de.deepamehta.workspaces.WorkspacesService;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -32,7 +32,7 @@ import org.codehaus.jettison.json.JSONArray;
 /**
  * @author Malte Reißig (<malte@mikromedia.de>)
  * @website http://github.com/mukil/dm4-littlehelpers
- * @version 0.2 - compatible with DM 4.7
+ * @version 0.3-SNAPSHOT - compatible with DM 4.8
  *
  */
 @Path("/helpers")
@@ -73,7 +73,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         results.addAll(getTopicSuggestions(query, "dm4.notes.title"));
         results.addAll(getTopicSuggestions(query, "dm4.accesscontrol.username"));
         // append the results of a generic fulltext search
-        List<Topic> naives = dms.searchTopics(query + "*", null);
+        List<Topic> naives = dm4.searchTopics(query + "*", null);
         if (naives != null) {
             log.info("Naive search " + naives.size() + " length");
             results.addAll(naives);
@@ -94,7 +94,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     @Path("/suggest/topics/{input}/{typeUri}")
     public List<Topic> getTopicSuggestions(@PathParam("input") String query, 
             @PathParam("typeUri") String typeUri) {
-        return dms.searchTopics(query + "*", typeUri);
+        return dm4.searchTopics(query + "*", typeUri);
     }
 
 
@@ -113,7 +113,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         try {
             // 1) Fetch all topics in either "created" or "modified"-timestamp timerange
             log.info("Fetching Standard Topics (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
-            ArrayList<Topic> standardTopics = new ArrayList<Topic>(); // items of interest
+            List<Topic> standardTopics = new ArrayList<Topic>(); // items of interest
             Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
             if (overallTopics.isEmpty()) log.info("getStandardTopicsInTimeRange("+type+") got NO result.");
             Iterator<Topic> resultset = overallTopics.iterator();
@@ -132,11 +132,11 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
             }
             log.info("Topics " + type + " in timerange query found " + standardTopics.size() + " standard topics");
             // 2) Sort all fetched items by their "created" or "modified" timestamps
-            ArrayList<Topic> in_memory_resources = null;
+            List<Topic> in_memory_resources = null;
             if (type.equals("created")) {
-                in_memory_resources = getTopicListSortedByCreationTime(standardTopics);
+                in_memory_resources = (List<Topic>) getTopicListSortedByCreationTime(standardTopics);
             } else if (type.equals("modified")) {
-                in_memory_resources = getTopicListSortedByModificationTime(standardTopics);
+                in_memory_resources = (List<Topic>) getTopicListSortedByModificationTime(standardTopics);
             }
             // 3) Prepare the notes page-results view-model (per type of interest)
             for (Topic item : in_memory_resources) {
@@ -200,7 +200,8 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         return results.toString();
     }
 
-    public ArrayList<Topic> getTopicListSortedByCreationTime(ArrayList<Topic> all) {
+    @Override
+    public List<? extends Topic> getTopicListSortedByCreationTime(List<? extends Topic> all) {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
@@ -219,7 +220,8 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         return all;
     }
 
-    public ArrayList<Topic> getTopicListSortedByModificationTime(ArrayList<Topic> all) {
+    @Override
+    public List<? extends Topic> getTopicListSortedByModificationTime(List<? extends Topic> all) {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
@@ -238,6 +240,31 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         return all;
     }
 
+    @Override
+    public List<? extends Topic> sortAlphabeticalDescending(List<? extends Topic> topics) {
+        Collections.sort(topics, new Comparator<Topic>() {
+            public int compare(Topic t1, Topic t2) {
+                String one = t1.getSimpleValue().toString();
+                String two = t2.getSimpleValue().toString();
+                return one.compareTo(two);
+            }
+        });
+        return topics;
+    }
+
+    @Override
+    public void sortAlphabeticalDescendingByChild(List<? extends Topic> topics, final String childTypeUri) {
+        Collections.sort(topics, new Comparator<Topic>() {
+            public int compare(Topic t1, Topic t2) {
+                t1.loadChildTopics(childTypeUri);
+                t2.loadChildTopics(childTypeUri);
+                String one = t1.getChildTopics().getString(childTypeUri);
+                String two = t2.getChildTopics().getString(childTypeUri);
+                return one.compareTo(two);
+            }
+        });
+    }
+    
     // --- Private Utility Methods
 
     private Collection<Topic> fetchAllTopicsInTimerange(String type, long since, long to) {
@@ -259,7 +286,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         if (viewConfigTypeCache.containsKey(element.getTypeUri())) {
             topicType = viewConfigTypeCache.get(element.getTypeUri());
         } else {
-            topicType = dms.getTopicType(element.getTypeUri());
+            topicType = dm4.getTopicType(element.getTypeUri());
             viewConfigTypeCache.put(element.getTypeUri(), topicType);
         }
         Object iconUrl = getViewConfig(topicType, "icon");
@@ -289,7 +316,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
                 searchableUnits.add(topic);
             } else {
                 List<RelatedTopic> parentTopics = topic.getRelatedTopics((String) null, "dm4.core.child",
-                    "dm4.core.parent", null, 0).getItems();
+                    "dm4.core.parent", null);
                 if (parentTopics.isEmpty()) {
                     searchableUnits.add(topic);
                 } else {
@@ -301,7 +328,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     }
 
     private boolean searchableAsUnit(Topic topic) {
-        TopicType topicType = dms.getTopicType(topic.getTypeUri());
+        TopicType topicType = dm4.getTopicType(topic.getTypeUri());
         Boolean searchableAsUnit = (Boolean) getViewConfig(topicType, "searchable_as_unit");
         return searchableAsUnit != null ? searchableAsUnit.booleanValue() : false;  // default is false
     }
