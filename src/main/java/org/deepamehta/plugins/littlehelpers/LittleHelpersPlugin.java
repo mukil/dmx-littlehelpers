@@ -1,5 +1,6 @@
 package org.deepamehta.plugins.littlehelpers;
 
+import de.deepamehta.accesscontrol.AccessControlService;
 import de.deepamehta.core.RelatedTopic;
 import java.util.logging.Logger;
 import java.util.List;
@@ -54,6 +55,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     private final static String PARENT_URI = "dm4.core.parent";
     private final static String AGGREGATION = "dm4.core.aggregation"; **/
 
+    @Inject AccessControlService acService;
     @Inject WorkspacesService wsService;
     @Inject TimeService timeService;
 
@@ -107,9 +109,9 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     @GET
     @Path("/by_time/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public String getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+    public List<ViewTopic> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
-        JSONArray results = new JSONArray();
+        List<ViewTopic> results = new ArrayList<ViewTopic>();
         try {
             // 1) Fetch all topics in either "created" or "modified"-timestamp timerange
             log.info("Fetching Standard Topics (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
@@ -145,7 +147,13 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
                     enrichTopicModelAboutCreationTimestamp(item);
                     enrichTopicModelAboutModificationTimestamp(item);
                     enrichTopicModelAboutIconConfigURL(item);
-                    results.put(item.toJSON());
+                    ViewTopic viewTopic = new ViewTopic();
+                    viewTopic.setTopicViewModel(item.toJSON());
+                    String username = acService.getCreator(item.getId());
+                    if (username != null) viewTopic.setUsername(username);
+                    Topic workspace = wsService.getAssignedWorkspace(item.getId());
+                    if (workspace != null) viewTopic.setWorkspaceId(workspace.getId());
+                    results.add(viewTopic);
                 } catch (RuntimeException rex) {
                     log.warning("Could not add fetched item to results, caused by: " + rex.getMessage());
                 }
@@ -153,7 +161,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         } catch (Exception e) { // e.g. a "RuntimeException" is thrown if the moodle-plugin is not installed
             throw new RuntimeException("something went wrong", e);
         }
-        return results.toString();
+        return results;
     }
 
     /**

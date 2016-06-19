@@ -25,7 +25,7 @@ public interface LittleHelpersService {
 
     List<? extends Topic> sortAlphabeticalDescending(List<? extends Topic> topics);
 
-    String getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
+    List<ViewTopic> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
 
     String getTopicIndexForTimeRange(String modifiedOrCreated, long from, long to);
 
