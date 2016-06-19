@@ -1,4 +1,4 @@
-package org.deepamehta.plugins.littlehelpers;
+package org.deepamehta.littlehelpers;
 
 
 import de.deepamehta.core.Topic;

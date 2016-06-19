@@ -15,11 +15,20 @@
         <artifactId>deepamehta-plugin</artifactId>
         <version>4.8</version>
     </parent>
-    
+
+    <!--properties>
+        <dm4.deploy.dir>/home/malted/Schreibtisch/DeepaMehta4/bundle-deploy</dm4.deploy.dir>
+    </properties-->
+
     <dependencies>
         <dependency>
             <groupId>de.deepamehta</groupId>
             <artifactId>deepamehta-workspaces</artifactId>
+            <version>4.8</version>
+        </dependency>
+        <dependency>
+            <groupId>de.deepamehta</groupId>
+            <artifactId>deepamehta-accesscontrol</artifactId>
             <version>4.8</version>
         </dependency>
         <dependency>
@@ -40,7 +49,7 @@
                             org.deepamehta.little-helpers
                         </Bundle-SymbolicName>
                         <Bundle-Activator>
-                            org.deepamehta.plugins.littlehelpers.LittleHelpersPlugin
+                            org.deepamehta.littlehelpers.LittleHelpersPlugin
                         </Bundle-Activator>
                     </instructions>
                 </configuration>
