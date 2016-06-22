@@ -1,4 +1,4 @@
-package org.deepamehta.littlehelpers;
+package org.deepamehta.littlehelpers.model;
 
 import de.deepamehta.core.JSONEnabled;
 import java.util.logging.Level;
@@ -7,11 +7,12 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
 /**
- * A JSON DTO to return a topic with the name of its creator and its context (workspace) id.
+ * A data transfer object representing a topic with additionally containing the name of
+ * its creator and the context (current workspace id) the topic is assigned to.
  *
  * @author Malte Reißig (<a href="mailto:malte@mikromedia.de">Mail</a>)
  */
-public class ViewTopic implements JSONEnabled {
+public class ListTopicItem implements JSONEnabled {
     
     JSONObject topic = new JSONObject();
     
@@ -20,7 +21,7 @@ public class ViewTopic implements JSONEnabled {
         try {
             topic.put("creator", username);
         } catch (JSONException ex) {
-            Logger.getLogger(ViewTopic.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ListTopicItem.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -29,7 +30,7 @@ public class ViewTopic implements JSONEnabled {
         try {
             topic.put("workspace", workspaceId);
         } catch (JSONException ex) {
-            Logger.getLogger(ViewTopic.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ListTopicItem.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

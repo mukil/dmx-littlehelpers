@@ -1,5 +1,7 @@
 package org.deepamehta.littlehelpers;
 
+import org.deepamehta.littlehelpers.model.ListTopicItem;
+import org.deepamehta.littlehelpers.model.SearchResultItem;
 import de.deepamehta.accesscontrol.AccessControlService;
 import de.deepamehta.core.RelatedTopic;
 import java.util.logging.Logger;
@@ -36,10 +38,10 @@ import org.codehaus.jettison.json.JSONArray;
  * @version 0.3-SNAPSHOT - compatible with DM 4.8
  *
  */
-@Path("/helpers")
+@Path("/littlehelpers")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-public class LittleHelpersPlugin extends PluginActivator implements LittleHelpersService {
+public class HelperPlugin extends PluginActivator implements HelperService {
 
     private Logger log = Logger.getLogger(getClass().getName());
 
@@ -66,10 +68,10 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     @GET
     @Override
     @Path("/suggest/topics/{input}")
-    public List<SuggestionViewModel> getTopicSuggestions(@PathParam("input") String query) {
+    public List<SearchResultItem> getTopicSuggestions(@PathParam("input") String query) {
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
-        List<SuggestionViewModel> suggestions = new ArrayList<SuggestionViewModel>();
+        List<SearchResultItem> suggestions = new ArrayList<SearchResultItem>();
         // three explicit search for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
         List<Topic> results = getTopicSuggestions(query, "dm4.topicmaps.name");
         results.addAll(getTopicSuggestions(query, "dm4.notes.title"));
@@ -85,7 +87,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
         List<Topic> new_results = findSearchableUnits(results);
         for (Topic t : new_results) {
             log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" + wsService.getAssignedWorkspace(t.getId())+ ")");
-            suggestions.add(new SuggestionViewModel(t, wsService.getAssignedWorkspace(t.getId())));
+            suggestions.add(new SearchResultItem(t, wsService.getAssignedWorkspace(t.getId())));
         }
         log.info("Suggesting " + suggestions.size() + " topics for input: " + query);
         return suggestions;
@@ -109,9 +111,9 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
     @GET
     @Path("/by_time/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public List<ViewTopic> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+    public List<ListTopicItem> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
-        List<ViewTopic> results = new ArrayList<ViewTopic>();
+        List<ListTopicItem> results = new ArrayList<ListTopicItem>();
         try {
             // 1) Fetch all topics in either "created" or "modified"-timestamp timerange
             log.info("Fetching Standard Topics (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
@@ -144,15 +146,7 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
             for (Topic item : in_memory_resources) {
                 try {
                     item.loadChildTopics();
-                    enrichTopicModelAboutCreationTimestamp(item);
-                    enrichTopicModelAboutModificationTimestamp(item);
-                    enrichTopicModelAboutIconConfigURL(item);
-                    ViewTopic viewTopic = new ViewTopic();
-                    viewTopic.setTopicViewModel(item.toJSON());
-                    String username = acService.getCreator(item.getId());
-                    if (username != null) viewTopic.setUsername(username);
-                    Topic workspace = wsService.getAssignedWorkspace(item.getId());
-                    if (workspace != null) viewTopic.setWorkspaceId(workspace.getId());
+                    ListTopicItem viewTopic = prepareViewTopicItem(item);
                     results.add(viewTopic);
                 } catch (RuntimeException rex) {
                     log.warning("Could not add fetched item to results, caused by: " + rex.getMessage());
@@ -197,7 +191,6 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
             // ArrayList<RelatedTopic> in_memory_resources = getResultSetSortedByCreationTime(all_resources);
             for (Topic item : standardTopics) { // 2) prepare resource items
                 // 3) Prepare the notes page-results view-model
-                item.loadChildTopics();
                 enrichTopicModelAboutCreationTimestamp(item);
                 enrichTopicModelAboutModificationTimestamp(item);
                 results.put(item.toJSON());
@@ -353,6 +346,21 @@ public class LittleHelpersPlugin extends PluginActivator implements LittleHelper
      */
     private Object getViewConfig(TopicType topicType, String setting) {
         return topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient." + setting);
+    }
+
+    private ListTopicItem prepareViewTopicItem(Topic item) {
+        // enrich "childs" array of topic to transfer about some basics
+        enrichTopicModelAboutCreationTimestamp(item);
+        enrichTopicModelAboutModificationTimestamp(item);
+        enrichTopicModelAboutIconConfigURL(item);
+        ListTopicItem viewTopic = new ListTopicItem();
+        viewTopic.setTopicViewModel(item.toJSON());
+        // enrich list item about context information
+        String username = acService.getCreator(item.getId());
+        if (username != null) viewTopic.setUsername(username);
+        Topic workspace = wsService.getAssignedWorkspace(item.getId());
+        if (workspace != null) viewTopic.setWorkspaceId(workspace.getId());
+        return viewTopic;
     }
 
 }

@@ -1,6 +1,8 @@
 package org.deepamehta.littlehelpers;
 
 
+import org.deepamehta.littlehelpers.model.ListTopicItem;
+import org.deepamehta.littlehelpers.model.SearchResultItem;
 import de.deepamehta.core.Topic;
 import java.util.List;
 
@@ -11,9 +13,9 @@ import java.util.List;
  * @website http://github.com/mukil/dm4-littlehelpers
  * @version 0.3 - compatible with DM 4.8
  */
-public interface LittleHelpersService {
+public interface HelperService {
 
-    List<SuggestionViewModel> getTopicSuggestions(String query);
+    List<SearchResultItem> getTopicSuggestions(String query);
 
     List<Topic> getTopicSuggestions(String query, String typeUri);
 
@@ -25,7 +27,7 @@ public interface LittleHelpersService {
 
     List<? extends Topic> sortAlphabeticalDescending(List<? extends Topic> topics);
 
-    List<ViewTopic> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
+    List<ListTopicItem> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
 
     String getTopicIndexForTimeRange(String modifiedOrCreated, long from, long to);
 
