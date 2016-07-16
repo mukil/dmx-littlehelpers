@@ -1,6 +1,7 @@
 package org.deepamehta.littlehelpers.model;
 
 import de.deepamehta.core.JSONEnabled;
+import de.deepamehta.core.Topic;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jettison.json.JSONException;
@@ -26,9 +27,10 @@ public class ListTopicItem implements JSONEnabled {
     }
 
     /** Note: Call after setTopciViewModel() */
-    public void setWorkspaceId(long workspaceId) {
+    public void setWorkspace(Topic workspace) {
         try {
-            topic.put("workspace", workspaceId);
+            topic.put("workspace", workspace.getSimpleValue().toString());
+            topic.put("workspace_id", workspace.getId());
         } catch (JSONException ex) {
             Logger.getLogger(ListTopicItem.class.getName()).log(Level.SEVERE, null, ex);
         }

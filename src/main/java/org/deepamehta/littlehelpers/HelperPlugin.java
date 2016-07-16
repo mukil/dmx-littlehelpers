@@ -359,7 +359,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         String username = acService.getCreator(item.getId());
         if (username != null) viewTopic.setUsername(username);
         Topic workspace = wsService.getAssignedWorkspace(item.getId());
-        if (workspace != null) viewTopic.setWorkspaceId(workspace.getId());
+        if (workspace != null) viewTopic.setWorkspace(workspace);
         return viewTopic;
     }
 
