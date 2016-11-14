@@ -45,7 +45,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     private Logger log = Logger.getLogger(getClass().getName());
 
-    // --- DeepaMehta Standard URIs
+    // --- DeepaMehta Time Plugin URIs
 
     private final static String PROP_URI_CREATED  = "dm4.time.created";
     private final static String PROP_URI_MODIFIED = "dm4.time.modified";
