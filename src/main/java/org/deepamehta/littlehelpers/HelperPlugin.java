@@ -70,6 +70,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     public List<SearchResult> getSuggestedSearchableUnits(@PathParam("input") String query) {
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
+        // ### Todo authorize request (maybe restrict to logged in users only)
         // fire three explicit searches: for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
         List<Topic> searchResults = getTopicSuggestions(query, "dm4.topicmaps.name");
         searchResults.addAll(getTopicSuggestions(query, "dm4.notes.title"));
@@ -77,20 +78,21 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         // fire another global fulltext search
         List<Topic> fulltextSearch = dm4.searchTopics(query + "*", null);
         if (fulltextSearch != null) {
-            log.info("Naive search " + fulltextSearch.size() + " length");
+            log.info("Fulltext Search for \""+query+"*\" we found \"" + fulltextSearch.size() + "\" and in "
+                    + "Topicmap Name, Notes Title and Username we found \"" + searchResults.size() + "\" topics");
             searchResults.addAll(fulltextSearch);
         }
-        log.info("> Checking for searchable units.. in " + searchResults.size() );
         List<Topic> newResults = findSearchableUnits(searchResults);
         List<SearchResult> suggestions = new ArrayList<SearchResult>();
         for (Topic t : newResults) {
             SearchResult result = new SearchResult(t, wsService.getAssignedWorkspace(t.getId()));
             if (!suggestions.contains(result)) {
-                log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" + wsService.getAssignedWorkspace(t.getId())+ ")");
+                log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" +
+                        wsService.getAssignedWorkspace(t.getId())+ ")");
                 suggestions.add(result);
             }
         }
-        log.info("Suggesting " + suggestions.size() + " topics for input \"" + query + "\"");
+        log.info("Suggesting " + suggestions.size() + " searchable units for input \"" + query + "\"");
         return suggestions;
     }
 
