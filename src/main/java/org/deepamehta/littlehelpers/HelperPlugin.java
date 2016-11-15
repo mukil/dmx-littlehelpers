@@ -1,7 +1,7 @@
 package org.deepamehta.littlehelpers;
 
-import org.deepamehta.littlehelpers.model.ListTopicItem;
-import org.deepamehta.littlehelpers.model.SearchResultItem;
+import org.deepamehta.littlehelpers.model.ListTopic;
+import org.deepamehta.littlehelpers.model.SearchResult;
 import de.deepamehta.accesscontrol.AccessControlService;
 import de.deepamehta.core.RelatedTopic;
 import java.util.logging.Logger;
@@ -50,12 +50,11 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     private final static String PROP_URI_CREATED  = "dm4.time.created";
     private final static String PROP_URI_MODIFIED = "dm4.time.modified";
 
-    // --- Custom Type Cache
+    // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until te bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
 
-    /** private final static String CHILD_URI = "dm4.core.child";
-    private final static String PARENT_URI = "dm4.core.parent";
-    private final static String AGGREGATION = "dm4.core.aggregation"; **/
+    private static final String SEARCH_OPTION_CREATED = "created";
+    private static final String SEARCH_OPTION_MODIFIED = "modified";
 
     @Inject AccessControlService acService;
     @Inject WorkspacesService wsService;
@@ -63,33 +62,35 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
 
 
-    // --- Stableviews Utility Service
+    /** ----------------------------- Command Line Util Suggestion Search ----------------------------- **/
 
     @GET
     @Override
     @Path("/suggest/topics/{input}")
-    public List<SearchResultItem> getTopicSuggestions(@PathParam("input") String query) {
+    public List<SearchResult> getSuggestedSearchableUnits(@PathParam("input") String query) {
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
-        List<SearchResultItem> suggestions = new ArrayList<SearchResultItem>();
-        // three explicit search for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
-        List<Topic> results = getTopicSuggestions(query, "dm4.topicmaps.name");
-        results.addAll(getTopicSuggestions(query, "dm4.notes.title"));
-        results.addAll(getTopicSuggestions(query, "dm4.accesscontrol.username"));
-        // append the results of a generic fulltext search
-        List<Topic> naives = dm4.searchTopics(query + "*", null);
-        if (naives != null) {
-            log.info("Naive search " + naives.size() + " length");
-            results.addAll(naives);
+        // fire three explicit searches: for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
+        List<Topic> searchResults = getTopicSuggestions(query, "dm4.topicmaps.name");
+        searchResults.addAll(getTopicSuggestions(query, "dm4.notes.title"));
+        searchResults.addAll(getTopicSuggestions(query, "dm4.accesscontrol.username"));
+        // fire another global fulltext search
+        List<Topic> fulltextSearch = dm4.searchTopics(query + "*", null);
+        if (fulltextSearch != null) {
+            log.info("Naive search " + fulltextSearch.size() + " length");
+            searchResults.addAll(fulltextSearch);
         }
-        // 
-        log.info("> Checking for searchable units.. in " + results.size() );
-        List<Topic> new_results = findSearchableUnits(results);
-        for (Topic t : new_results) {
-            log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" + wsService.getAssignedWorkspace(t.getId())+ ")");
-            suggestions.add(new SearchResultItem(t, wsService.getAssignedWorkspace(t.getId())));
+        log.info("> Checking for searchable units.. in " + searchResults.size() );
+        List<Topic> newResults = findSearchableUnits(searchResults);
+        List<SearchResult> suggestions = new ArrayList<SearchResult>();
+        for (Topic t : newResults) {
+            SearchResult result = new SearchResult(t, wsService.getAssignedWorkspace(t.getId()));
+            if (!suggestions.contains(result)) {
+                log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" + wsService.getAssignedWorkspace(t.getId())+ ")");
+                suggestions.add(result);
+            }
         }
-        log.info("Suggesting " + suggestions.size() + " topics for input: " + query);
+        log.info("Suggesting " + suggestions.size() + " topics for input \"" + query + "\"");
         return suggestions;
     }
 
@@ -103,7 +104,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
 
 
-    // --- Timeline Utility Service (Formerly eduZEN Notizen)
+    /** ------------------------------ Timerange Search Utils  --------------------------- **/
 
     /**
      * Fetches standard topics by time-range and time-value (created || modified).
@@ -111,9 +112,9 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @GET
     @Path("/by_time/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public List<ListTopicItem> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+    public List<ListTopic> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
-        List<ListTopicItem> results = new ArrayList<ListTopicItem>();
+        List<ListTopic> results = new ArrayList<ListTopic>();
         try {
             // 1) Fetch all topics in either "created" or "modified"-timestamp timerange
             log.info("Fetching Standard Topics (\"" + type + "\") since: " + new Date(since) + " and " + new Date(to));
@@ -137,16 +138,16 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             log.info("Topics " + type + " in timerange query found " + standardTopics.size() + " standard topics");
             // 2) Sort all fetched items by their "created" or "modified" timestamps
             List<Topic> in_memory_resources = null;
-            if (type.equals("created")) {
+            if (type.equals(SEARCH_OPTION_CREATED)) {
                 in_memory_resources = (List<Topic>) getTopicListSortedByCreationTime(standardTopics);
-            } else if (type.equals("modified")) {
+            } else if (type.equals(SEARCH_OPTION_MODIFIED)) {
                 in_memory_resources = (List<Topic>) getTopicListSortedByModificationTime(standardTopics);
             }
             // 3) Prepare the notes page-results view-model (per type of interest)
             for (Topic item : in_memory_resources) {
                 try {
                     item.loadChildTopics();
-                    ListTopicItem viewTopic = prepareViewTopicItem(item);
+                    ListTopic viewTopic = prepareViewTopicItem(item);
                     results.add(viewTopic);
                 } catch (RuntimeException rex) {
                     log.warning("Could not add fetched item to results, caused by: " + rex.getMessage());
@@ -201,6 +202,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         return results.toString();
     }
 
+    /** ---------------------------------- Sorting Utils ----------------------------------- **/
+
     @Override
     public List<? extends Topic> getTopicListSortedByCreationTime(List<? extends Topic> all) {
         Collections.sort(all, new Comparator<Topic>() {
@@ -242,7 +245,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     }
 
     @Override
-    public List<? extends Topic> sortAlphabeticalDescending(List<? extends Topic> topics) {
+    public void sortCompareToBySimpleValue(List<? extends Topic> topics) {
         Collections.sort(topics, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 String one = t1.getSimpleValue().toString();
@@ -250,11 +253,10 @@ public class HelperPlugin extends PluginActivator implements HelperService {
                 return one.compareTo(two);
             }
         });
-        return topics;
     }
 
     @Override
-    public void sortAlphabeticalDescendingByChild(List<? extends Topic> topics, final String childTypeUri) {
+    public void sortCompareToByChildTypeValue(List<? extends Topic> topics, final String childTypeUri) {
         Collections.sort(topics, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 t1.loadChildTopics(childTypeUri);
@@ -265,24 +267,11 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             }
         });
     }
-    
-    // --- Private Utility Methods
 
-    private Collection<Topic> fetchAllTopicsInTimerange(String type, long since, long to) {
-        Collection<Topic> topics = null;
-        if (type.equals("created")) {
-            topics = timeService.getTopicsByCreationTime(since, to);
-            log.fine("> Queried " +topics.size()+ " elements CREATED since: " + new Date(since) + " and " + new Date(to));
-        } else if (type.equals("modified")) {
-            topics = timeService.getTopicsByModificationTime(since, to);
-            log.fine("> Queried " +topics.size()+ " elements MODIFIED since: " + new Date(since) + " and " + new Date(to));
-        } else {
-            throw new RuntimeException("Wrong parameter: set time_value either to \"created\" or \"modified\"");
-        }
-        return topics;
-    }
+    /** -------------------------- Topic Presentation Utils (Timeline List Items) ---------------------------- **/
 
-    private void enrichTopicModelAboutIconConfigURL(Topic element) {
+    @Override
+    public void enrichTopicModelAboutIconConfigURL(Topic element) {
         TopicType topicType = null;
         if (viewConfigTypeCache.containsKey(element.getTypeUri())) {
             topicType = viewConfigTypeCache.get(element.getTypeUri());
@@ -297,20 +286,23 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         }
     }
 
-    private void enrichTopicModelAboutCreationTimestamp(Topic resource) {
+    @Override
+    public void enrichTopicModelAboutCreationTimestamp(Topic resource) {
         long created = timeService.getCreationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.put(PROP_URI_CREATED, created);
     }
 
-    private void enrichTopicModelAboutModificationTimestamp(Topic resource) {
+    @Override
+    public void enrichTopicModelAboutModificationTimestamp(Topic resource) {
         long created = timeService.getModificationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.put(PROP_URI_MODIFIED, created);
     }
 
     /** Taken from the WebclientPlugin.java by Jörg Richter */
-    private List<Topic> findSearchableUnits(List<? extends Topic> topics) {
+    @Override
+    public List<Topic> findSearchableUnits(List<? extends Topic> topics) {
         List<Topic> searchableUnits = new ArrayList<Topic>();
         for (Topic topic : topics) {
             if (searchableAsUnit(topic)) {
@@ -328,10 +320,29 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         return searchableUnits;
     }
 
+
+
+    // --- Private Utility Methods
+
     private boolean searchableAsUnit(Topic topic) {
         TopicType topicType = dm4.getTopicType(topic.getTypeUri());
         Boolean searchableAsUnit = (Boolean) getViewConfig(topicType, "searchable_as_unit");
         return searchableAsUnit != null ? searchableAsUnit.booleanValue() : false;  // default is false
+    }
+
+    private Collection<Topic> fetchAllTopicsInTimerange(String searchOption, long since, long to) {
+        Collection<Topic> topics = null;
+        if (searchOption.equals(SEARCH_OPTION_CREATED)) {
+            topics = timeService.getTopicsByCreationTime(since, to);
+            log.fine("> Queried " +topics.size()+ " elements CREATED since: " + new Date(since) + " and " + new Date(to));
+        } else if (searchOption.equals(SEARCH_OPTION_MODIFIED)) {
+            topics = timeService.getTopicsByModificationTime(since, to);
+            log.fine("> Queried " +topics.size()+ " elements MODIFIED since: " + new Date(since) + " and " + new Date(to));
+        } else {
+            throw new RuntimeException("Invalid search parameter: set time_value either to \""
+                    +SEARCH_OPTION_CREATED+"\" or \""+SEARCH_OPTION_MODIFIED+"\"");
+        }
+        return topics;
     }
 
     /**
@@ -348,18 +359,12 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         return topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient." + setting);
     }
 
-    private ListTopicItem prepareViewTopicItem(Topic item) {
+    private ListTopic prepareViewTopicItem(Topic item) {
         // enrich "childs" array of topic to transfer about some basics
         enrichTopicModelAboutCreationTimestamp(item);
         enrichTopicModelAboutModificationTimestamp(item);
         enrichTopicModelAboutIconConfigURL(item);
-        ListTopicItem viewTopic = new ListTopicItem();
-        viewTopic.setTopicViewModel(item.toJSON());
-        // enrich list item about context information
-        String username = acService.getCreator(item.getId());
-        if (username != null) viewTopic.setUsername(username);
-        Topic workspace = wsService.getAssignedWorkspace(item.getId());
-        if (workspace != null) viewTopic.setWorkspace(workspace);
+        ListTopic viewTopic = new ListTopic(item, acService, wsService);
         return viewTopic;
     }
 

@@ -11,17 +11,17 @@ import org.codehaus.jettison.json.JSONObject;
 
 /**
  * Representing a search result item for an auto-complete feature.
- * @author Malte Reißig (<a href="mailto:malte@mikromedia.de">Mail</a>)
+ * @author Malte Reißig
  */
-public class SearchResultItem implements JSONEnabled {
+public class SearchResult implements JSONEnabled {
     
-    Topic suggestion = null;
+    Topic item = null;
     Topic workspace = null;
     String workspaceMode = null;
     // String[] commands = null;
-    
-    public SearchResultItem (Topic topic, Topic workspace) {
-        this.suggestion = topic;
+
+    public SearchResult (Topic topic, Topic workspace) {
+        this.item = topic;
         this.workspace = workspace;
         this.workspaceMode = workspace.loadChildTopics("dm4.workspaces.sharing_mode")
                 .getChildTopics().getString("dm4.workspaces.sharing_mode");
@@ -30,13 +30,17 @@ public class SearchResultItem implements JSONEnabled {
     public JSONObject toJSON() {
         try {
             return new JSONObject()
-                .put("topic", suggestion.toJSON())
+                .put("topic", item.toJSON())
                 .put("workspace", (workspace == null) ? "undefined" : workspace.toJSON())
                 .put("workspace_mode", workspaceMode);
         } catch (JSONException ex) {
-            Logger.getLogger(SearchResultItem.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(SearchResult.class.getName()).log(Level.SEVERE, null, ex);
         }
         return new JSONObject();
+    }
+
+    public long getId() {
+        return item.getId();
     }
 
 }

@@ -1,8 +1,8 @@
 package org.deepamehta.littlehelpers;
 
 
-import org.deepamehta.littlehelpers.model.ListTopicItem;
-import org.deepamehta.littlehelpers.model.SearchResultItem;
+import org.deepamehta.littlehelpers.model.ListTopic;
+import org.deepamehta.littlehelpers.model.SearchResult;
 import de.deepamehta.core.Topic;
 import java.util.List;
 
@@ -15,19 +15,27 @@ import java.util.List;
  */
 public interface HelperService {
 
-    List<SearchResultItem> getTopicSuggestions(String query);
+    List<SearchResult> getSuggestedSearchableUnits(String query);
 
     List<Topic> getTopicSuggestions(String query, String typeUri);
+
+    List<Topic> findSearchableUnits(List<? extends Topic> topics);
 
     List<? extends Topic> getTopicListSortedByCreationTime(List<? extends Topic> list);
 
     List<? extends Topic> getTopicListSortedByModificationTime(List<? extends Topic> list);
 
-    void sortAlphabeticalDescendingByChild(List<? extends Topic> topics, final String childTypeUri);
+    void enrichTopicModelAboutIconConfigURL(Topic item);
 
-    List<? extends Topic> sortAlphabeticalDescending(List<? extends Topic> topics);
+    void enrichTopicModelAboutCreationTimestamp(Topic item);
 
-    List<ListTopicItem> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
+    void enrichTopicModelAboutModificationTimestamp(Topic item);
+
+    void sortCompareToByChildTypeValue(List<? extends Topic> topics, final String childTypeUri);
+
+    void sortCompareToBySimpleValue(List<? extends Topic> topics);
+
+    List<ListTopic> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
 
     String getTopicIndexForTimeRange(String modifiedOrCreated, long from, long to);
 
