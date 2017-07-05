@@ -162,7 +162,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     }
 
     /**
-     * Getting composites of all standard topics in given timerange.
+     * Build a topic index (useful to display and facilitating visual time range queries) over most dm4 standard
+     * topic types and a given timerange.
      */
     @GET
     @Path("/timeindex/{time_value}/{since}/{to}")
@@ -358,7 +359,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
      * @return  The setting value, or <code>null</code> if there is no such setting
      */
     private Object getViewConfig(TopicType topicType, String setting) {
-        return topicType.getViewConfig("dm4.webclient.view_config", "dm4.webclient." + setting);
+        return topicType.getViewConfigValue("dm4.webclient.view_config", "dm4.webclient." + setting);
     }
 
     private ListTopic prepareViewTopicItem(Topic item) {
