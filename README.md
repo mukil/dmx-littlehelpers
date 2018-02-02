@@ -12,6 +12,10 @@ Developed to support the http://github.com/mukil/stableviews plugin, in particul
 
 ## Release History
 
+**0.4.0** -- Feb 02, 2018
+
+* Adapted to breaking changes in DM 4.8.7
+
 **0.3.0** -- Nov 15, 2016
 
 * Basically workgin
