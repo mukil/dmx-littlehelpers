@@ -1,17 +1,17 @@
-package org.deepamehta.littlehelpers.model;
+package systems.dmx.littlehelpers.model;
 
-import de.deepamehta.core.JSONEnabled;
-import de.deepamehta.core.Topic;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import systems.dmx.core.JSONEnabled;
+import systems.dmx.core.Topic;
 
 
 
 /**
  * Representing a search result item for an auto-complete feature.
- * @author Malte Reißig
+ * @author Malte Reißig <malte@dmx.berlin>
  */
 public class SearchResult implements JSONEnabled {
     

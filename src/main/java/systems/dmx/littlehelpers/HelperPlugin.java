@@ -1,9 +1,7 @@
-package org.deepamehta.littlehelpers;
+package systems.dmx.littlehelpers;
 
-import org.deepamehta.littlehelpers.model.ListTopic;
-import org.deepamehta.littlehelpers.model.SearchResult;
-import de.deepamehta.accesscontrol.AccessControlService;
-import de.deepamehta.core.RelatedTopic;
+import systems.dmx.littlehelpers.model.ListTopic;
+import systems.dmx.littlehelpers.model.SearchResult;
 import java.util.logging.Logger;
 import java.util.List;
 
@@ -13,14 +11,6 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 
-import de.deepamehta.core.Topic;
-import de.deepamehta.core.TopicType;
-import de.deepamehta.core.model.ChildTopicsModel;
-
-import de.deepamehta.core.osgi.PluginActivator;
-import de.deepamehta.core.service.Inject;
-import de.deepamehta.time.TimeService;
-import de.deepamehta.workspaces.WorkspacesService;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,12 +20,21 @@ import java.util.HashMap;
 import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
+import systems.dmx.accesscontrol.AccessControlService;
+import systems.dmx.core.RelatedTopic;
+import systems.dmx.core.Topic;
+import systems.dmx.core.TopicType;
+import systems.dmx.core.model.ChildTopicsModel;
+import systems.dmx.core.osgi.PluginActivator;
+import systems.dmx.core.service.Inject;
+import systems.dmx.timestamps.TimestampsService;
+import systems.dmx.workspaces.WorkspacesService;
 
 
 /**
- * @author Malte Reißig (<malte@mikromedia.de>)
- * @website http://github.com/mukil/dm4-littlehelpers
- * @version 0.3-SNAPSHOT - compatible with DM 4.8
+ * @author Malte Reißig <malte@dmx.berlin>
+ * @website http://git.dmx.systems/mukil/dmx-littlehelpers
+ * @version 0.5-SNAPSHOT - compatible with DMX 5.0-beta-4
  *
  */
 @Path("/littlehelpers")
@@ -47,8 +46,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     // --- DeepaMehta Time Plugin URIs
 
-    private final static String PROP_URI_CREATED  = "dm4.time.created";
-    private final static String PROP_URI_MODIFIED = "dm4.time.modified";
+    private final static String PROP_URI_CREATED  = "dmx.time.created";
+    private final static String PROP_URI_MODIFIED = "dmx.time.modified";
 
     // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until te bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
@@ -58,7 +57,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     @Inject AccessControlService acService;
     @Inject WorkspacesService wsService;
-    @Inject TimeService timeService;
+    @Inject TimestampsService timeService;
 
 
 
@@ -71,12 +70,12 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
         // ### Todo authorize request (maybe restrict to logged in users only)
-        // fire three explicit searches: for topicmap name, usernames and note-titles ### add IndexMode.FULLTEXT_KEY ?
-        List<Topic> searchResults = getTopicSuggestions(query, "dm4.topicmaps.name");
-        searchResults.addAll(getTopicSuggestions(query, "dm4.notes.title"));
-        searchResults.addAll(getTopicSuggestions(query, "dm4.accesscontrol.username"));
+        // fire three explicit searches: for topicmap name, usernames and note-titles
+        List<Topic> searchResults = getTopicSuggestions(query, "dmx.topicmaps.name");
+        searchResults.addAll(getTopicSuggestions(query, "dmx.notes.title"));
+        searchResults.addAll(getTopicSuggestions(query, "dmx.accesscontrol.username"));
         // fire another global fulltext search
-        List<Topic> fulltextSearch = dm4.searchTopics(query + "*", null);
+        List<Topic> fulltextSearch = dmx.queryTopicsFulltext(query + "*", null);
         if (fulltextSearch != null) {
             log.info("Fulltext Search for \""+query+"*\" we found \"" + fulltextSearch.size() + "\" and in "
                     + "Topicmap Name, Notes Title and Username we found \"" + searchResults.size() + "\" topics");
@@ -101,7 +100,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @Path("/suggest/topics/{input}/{typeUri}")
     public List<Topic> getTopicSuggestions(@PathParam("input") String query, 
             @PathParam("typeUri") String typeUri) {
-        return dm4.searchTopics(query + "*", typeUri);
+        return dmx.queryTopicsFulltext(query + " OR *" + query + "*", typeUri);
     }
 
 
@@ -126,12 +125,12 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
-                if (in_question.getTypeUri().equals("dm4.notes.note") ||
-                    in_question.getTypeUri().equals("dm4.files.file") ||
-                    in_question.getTypeUri().equals("dm4.files.folder") ||
-                    in_question.getTypeUri().equals("dm4.contacts.person") ||
-                    in_question.getTypeUri().equals("dm4.contacts.institution") ||
-                    in_question.getTypeUri().equals("dm4.webbrowser.web_resource")) {
+                if (in_question.getTypeUri().equals("dmx.notes.note") ||
+                    in_question.getTypeUri().equals("dmx.files.file") ||
+                    in_question.getTypeUri().equals("dmx.files.folder") ||
+                    in_question.getTypeUri().equals("dmx.contacts.person") ||
+                    in_question.getTypeUri().equals("dmx.contacts.organization") ||
+                    in_question.getTypeUri().equals("dmx.bookmarks.bookmark")) {
                     standardTopics.add(in_question);
                 } else {
                     // log.info("> Result \"" +in_question.getSimpleValue()+ "\" (" +in_question.getTypeUri()+ ")");
@@ -180,12 +179,12 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
-                if (in_question.getTypeUri().equals("dm4.notes.note") ||
-                    in_question.getTypeUri().equals("dm4.files.file") ||
-                    in_question.getTypeUri().equals("dm4.files.folder") ||
-                    in_question.getTypeUri().equals("dm4.contacts.person") ||
-                    in_question.getTypeUri().equals("dm4.contacts.institution") ||
-                    in_question.getTypeUri().equals("dm4.webbrowser.web_resource")) {
+                if (in_question.getTypeUri().equals("dmx.notes.note") ||
+                    in_question.getTypeUri().equals("dmx.files.file") ||
+                    in_question.getTypeUri().equals("dmx.files.folder") ||
+                    in_question.getTypeUri().equals("dmx.contacts.person") ||
+                    in_question.getTypeUri().equals("dmx.contacts.organization") ||
+                    in_question.getTypeUri().equals("dmx.bookmarks.bookmark")) {
                     // log.info("> " +in_question.getSimpleValue()+ " of type \"" +in_question.getTypeUri()+ "\"");
                     standardTopics.add(in_question);
                 }
@@ -279,13 +278,13 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         if (viewConfigTypeCache.containsKey(element.getTypeUri())) {
             topicType = viewConfigTypeCache.get(element.getTypeUri());
         } else {
-            topicType = dm4.getTopicType(element.getTypeUri());
+            topicType = dmx.getTopicType(element.getTypeUri());
             viewConfigTypeCache.put(element.getTypeUri(), topicType);
         }
         Object iconUrl = getViewConfig(topicType, "icon");
         if (iconUrl != null) {
             ChildTopicsModel resourceModel = element.getChildTopics().getModel();
-            resourceModel.put("dm4.webclient.icon", iconUrl.toString());
+            resourceModel.put("dmx.webclient.icon", iconUrl.toString());
         }
     }
 
@@ -311,8 +310,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             if (searchableAsUnit(topic)) {
                 searchableUnits.add(topic);
             } else {
-                List<RelatedTopic> parentTopics = topic.getRelatedTopics((String) null, "dm4.core.child",
-                    "dm4.core.parent", null);
+                List<RelatedTopic> parentTopics = topic.getRelatedTopics(null, "dmx.core.child",
+                    "dmx.core.parent", null);
                 if (parentTopics.isEmpty()) {
                     searchableUnits.add(topic);
                 } else {
@@ -328,7 +327,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     // --- Private Utility Methods
 
     private boolean searchableAsUnit(Topic topic) {
-        TopicType topicType = dm4.getTopicType(topic.getTypeUri());
+        TopicType topicType = dmx.getTopicType(topic.getTypeUri());
         Boolean searchableAsUnit = (Boolean) getViewConfig(topicType, "searchable_as_unit");
         return searchableAsUnit != null ? searchableAsUnit.booleanValue() : false;  // default is false
     }
@@ -359,7 +358,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
      * @return  The setting value, or <code>null</code> if there is no such setting
      */
     private Object getViewConfig(TopicType topicType, String setting) {
-        return topicType.getViewConfigValue("dm4.webclient.view_config", "dm4.webclient." + setting);
+        return topicType.getViewConfigValue("dmx.webclient.view_config", "dmx.webclient." + setting);
     }
 
     private ListTopic prepareViewTopicItem(Topic item) {

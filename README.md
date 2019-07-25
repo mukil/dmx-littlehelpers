@@ -1,16 +1,45 @@
 
-# DeepaMehta 4 Little Helpers
+# DMX Little Helpers
 
-A plugin utility service and HTTP API endpoint to query, sort, filter and enrich DeepaMehta 4 topics in Lists.
+A plugin development helper comprised of the following functionalities:
 
-Developed to support the http://github.com/mukil/stableviews plugin, in particular trough delivering the
+Time Search API:
 
-- viewmodel items
-- timerange queries
-- custom search results (to be used in a frontend/command line as topic and/or entity suggestions)
+- `/timeindex/{time_value}/{since}/{to}` (builds Index for visually supporting time-queries)
+- `/by_time/{time_value}/{since}/{to}` (queries `Note`, `File`, `Folder`, `Person`, `Organization` and `Bookmark` topics)
 
+Parameter `time_value` can be either `created` or `modified`.
 
-## Release History
+Results of this API are each enriched about an icon path and their `created` and `modified` timestamps.
+
+Topic query delivering a list of `SearchResult` (custom ViewModel):
+
+- `/suggest/topics/{input}` (queries `Note Title`, `Topicmaps Name` and `Username`)
+- `/suggest/topics/{input}/{typeUri}`
+
+`Search Result` of this endpoint are each enriched about their `username` and `workspace` info.
+
+Sorting utilities:
+
+- `getTopicListSortedByCreationTime`
+- `getTopicListSortedByModificationTime`
+- `sortCompareToBySimpleValue`
+- `sortCompareToByChildTypeValue`
+
+Licensing
+---------
+
+DMX Little Helpers software is available freely under the GNU Affero General Public License, version 3.
+
+All third party components incorporated into the DMX Little Helpers Software are licensed under the original license provided by the owner of the applicable component.
+
+Release History
+---------------
+
+**0.5.0** -- Upcoming
+
+* Adapted to be compatible with DMX 5.0-beta-4
+* Released under the AGPL-3.0 license
 
 **0.4.0** -- Feb 02, 2018
 
@@ -20,6 +49,9 @@ Developed to support the http://github.com/mukil/stableviews plugin, in particul
 
 * Basically workgin
 
---------------------------
-Author: Malte Reißig, 2015-16
+Copyright
+---------
+Copyright (C) 2015, 16, 2018 Malte Reißig <malte@dmx.berlin>
+Copyright (C) 2019 DMX Systems
+
 

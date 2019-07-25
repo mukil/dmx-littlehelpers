@@ -1,10 +1,10 @@
-package org.deepamehta.littlehelpers;
+package systems.dmx.littlehelpers;
 
 
-import org.deepamehta.littlehelpers.model.ListTopic;
-import org.deepamehta.littlehelpers.model.SearchResult;
-import de.deepamehta.core.Topic;
+import systems.dmx.littlehelpers.model.ListTopic;
+import systems.dmx.littlehelpers.model.SearchResult;
 import java.util.List;
+import systems.dmx.core.Topic;
 
 /**
  * A plugin-service helping with DeepaMehta 4 plugin development.
