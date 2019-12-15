@@ -21,6 +21,7 @@ import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
+import systems.dmx.core.QueryResult;
 import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
@@ -74,12 +75,12 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         List<Topic> searchResults = getTopicSuggestions(query, "dmx.topicmaps.name");
         searchResults.addAll(getTopicSuggestions(query, "dmx.notes.title"));
         searchResults.addAll(getTopicSuggestions(query, "dmx.accesscontrol.username"));
-        // fire another global fulltext search
-        List<Topic> fulltextSearch = dmx.queryTopicsFulltext(query + "*", null);
-        if (fulltextSearch != null) {
-            log.info("Fulltext Search for \""+query+"*\" we found \"" + fulltextSearch.size() + "\" and in "
+        // fire another global fulltext search // Note: As of 5.0 Beta-5, A Lucene Query is constructed by default in Core
+        QueryResult queryResults = dmx.queryTopicsFulltext(query, null, false);
+        if (queryResults != null) {
+            log.info("Fulltext Search for \""+query+"*\" we found \"" + queryResults.topics.size() + "\" and in "
                     + "Topicmap Name, Notes Title and Username we found \"" + searchResults.size() + "\" topics");
-            searchResults.addAll(fulltextSearch);
+            searchResults.addAll(queryResults.topics);
         }
         List<Topic> newResults = findSearchableUnits(searchResults);
         List<SearchResult> suggestions = new ArrayList<SearchResult>();
@@ -100,7 +101,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @Path("/suggest/topics/{input}/{typeUri}")
     public List<Topic> getTopicSuggestions(@PathParam("input") String query, 
             @PathParam("typeUri") String typeUri) {
-        return dmx.queryTopicsFulltext(query + " OR *" + query + "*", typeUri);
+        // Note: As of 5.0 Beta-5, A Lucene Query is constructed by default in Core
+        return dmx.queryTopicsFulltext(query, typeUri, false).topics;
     }
 
 
