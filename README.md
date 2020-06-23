@@ -38,7 +38,7 @@ Release History
 
 **0.5.0** -- Upcoming
 
-* Adapted to be compatible with DMX 5.0-beta-4
+* Adapted to be compatible with DMX 5.0
 * Released under the AGPL-3.0 license
 
 **0.4.0** -- Feb 02, 2018
