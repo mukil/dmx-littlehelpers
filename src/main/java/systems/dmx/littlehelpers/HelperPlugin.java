@@ -34,8 +34,8 @@ import systems.dmx.workspaces.WorkspacesService;
 
 /**
  * @author Malte Reißig <malte@dmx.berlin>
- * @website http://git.dmx.systems/mukil/dmx-littlehelpers
- * @version 0.5-SNAPSHOT - compatible with DMX 5.0-beta-4
+ * @website http://git.dmx.systems/dmx-plugins/dmx-littlehelpers
+ * @version 0.5-SNAPSHOT - compatible with DMX 5.0-SNAPSHOT
  *
  */
 @Path("/littlehelpers")
@@ -286,7 +286,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         Object iconUrl = getViewConfig(topicType, "icon");
         if (iconUrl != null) {
             ChildTopicsModel resourceModel = element.getChildTopics().getModel();
-            resourceModel.put("dmx.webclient.icon", iconUrl.toString());
+            resourceModel.set("dmx.webclient.icon", iconUrl.toString());
         }
     }
 
@@ -294,14 +294,14 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     public void enrichTopicModelAboutCreationTimestamp(Topic resource) {
         long created = timeService.getCreationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
-        resourceModel.put(PROP_URI_CREATED, created);
+        resourceModel.set(PROP_URI_CREATED, created);
     }
 
     @Override
     public void enrichTopicModelAboutModificationTimestamp(Topic resource) {
         long created = timeService.getModificationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
-        resourceModel.put(PROP_URI_MODIFIED, created);
+        resourceModel.set(PROP_URI_MODIFIED, created);
     }
 
     /** Taken from the WebclientPlugin.java by Jörg Richter */
