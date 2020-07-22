@@ -15,11 +15,9 @@ import systems.dmx.core.Topic;
  */
 public interface HelperService {
 
-    List<SearchResult> getSuggestedSearchableUnits(String query);
+    List<SearchResult> getSuggestedSearchResults(String query);
 
     List<Topic> getTopicSuggestions(String query, String typeUri);
-
-    List<Topic> findSearchableUnits(List<? extends Topic> topics);
 
     List<? extends Topic> getTopicListSortedByCreationTime(List<? extends Topic> list);
 

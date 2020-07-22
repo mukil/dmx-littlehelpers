@@ -21,6 +21,8 @@ import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
+import static systems.dmx.core.Constants.CHILD;
+import static systems.dmx.core.Constants.PARENT;
 import systems.dmx.core.QueryResult;
 import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
@@ -45,11 +47,13 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     private Logger log = Logger.getLogger(getClass().getName());
 
-    // --- DeepaMehta Time Plugin URIs
+    // --- DMX Time Plugin URIs
 
     private final static String PROP_URI_CREATED  = "dmx.timestamps.created";
     private final static String PROP_URI_MODIFIED = "dmx.timestamps.modified";
 
+    private final static String WEBCLIENT_ICON_URI = "dmx.webclient.icon";
+    
     // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until te bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
 
@@ -67,7 +71,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @GET
     @Override
     @Path("/suggest/topics/{input}")
-    public List<SearchResult> getSuggestedSearchableUnits(@PathParam("input") String query) {
+    public List<SearchResult> getSuggestedSearchResults(@PathParam("input") String query) {
         if(query == null || query.length() < 2) throw new IllegalArgumentException("To receive "
                 + "suggestions, please provide at least two characters.");
         // ### Todo authorize request (maybe restrict to logged in users only)
@@ -82,9 +86,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
                     + "Topicmap Name, Notes Title and Username we found \"" + searchResults.size() + "\" topics");
             searchResults.addAll(queryResults.topics);
         }
-        List<Topic> newResults = findSearchableUnits(searchResults);
         List<SearchResult> suggestions = new ArrayList<SearchResult>();
-        for (Topic t : newResults) {
+        for (Topic t : searchResults) {
             SearchResult result = new SearchResult(t, wsService.getAssignedWorkspace(t.getId()));
             if (!suggestions.contains(result)) {
                 log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" +
@@ -92,7 +95,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
                 suggestions.add(result);
             }
         }
-        log.info("Suggesting " + suggestions.size() + " searchable units for input \"" + query + "\"");
+        log.info("Suggesting " + suggestions.size() + " search results for input \"" + query + "\"");
         return suggestions;
     }
 
@@ -124,7 +127,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             List<Topic> standardTopics = new ArrayList<Topic>(); // items of interest
             Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
             if (overallTopics.isEmpty()) log.info("getStandardTopicsInTimeRange("+type+") got NO result.");
-            // Todo: Load all Entity Types to generically filter resultset
+            // Todo: Load all Entity Types (with add_to_create_menu=true) to generically filter resultset
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
@@ -287,7 +290,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         Object iconUrl = getViewConfig(topicType, "icon");
         if (iconUrl != null) {
             ChildTopicsModel resourceModel = element.getChildTopics().getModel();
-            resourceModel.set("dmx.webclient.icon", iconUrl.toString());
+            resourceModel.set(WEBCLIENT_ICON_URI, iconUrl.toString());
         }
     }
 
@@ -305,35 +308,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         resourceModel.set(PROP_URI_MODIFIED, created);
     }
 
-    /** Taken from the WebclientPlugin.java by Jörg Richter */
-    @Override
-    public List<Topic> findSearchableUnits(List<? extends Topic> topics) {
-        List<Topic> searchableUnits = new ArrayList<Topic>();
-        for (Topic topic : topics) {
-            if (searchableAsUnit(topic)) {
-                searchableUnits.add(topic);
-            } else {
-                List<RelatedTopic> parentTopics = topic.getRelatedTopics(null, "dmx.core.child",
-                    "dmx.core.parent", null);
-                if (parentTopics.isEmpty()) {
-                    searchableUnits.add(topic);
-                } else {
-                    searchableUnits.addAll(findSearchableUnits(parentTopics));
-                }
-            }
-        }
-        return searchableUnits;
-    }
-
-
-
     // --- Private Utility Methods
-
-    private boolean searchableAsUnit(Topic topic) {
-        TopicType topicType = dmx.getTopicType(topic.getTypeUri());
-        Boolean searchableAsUnit = (Boolean) getViewConfig(topicType, "searchable_as_unit");
-        return searchableAsUnit != null ? searchableAsUnit.booleanValue() : false;  // default is false
-    }
 
     private Collection<Topic> fetchAllTopicsInTimerange(String searchOption, long since, long to) {
         Collection<Topic> topics = null;
