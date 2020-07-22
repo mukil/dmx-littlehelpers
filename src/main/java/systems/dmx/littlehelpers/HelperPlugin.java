@@ -47,8 +47,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     // --- DeepaMehta Time Plugin URIs
 
-    private final static String PROP_URI_CREATED  = "dmx.time.created";
-    private final static String PROP_URI_MODIFIED = "dmx.time.modified";
+    private final static String PROP_URI_CREATED  = "dmx.timestamps.created";
+    private final static String PROP_URI_MODIFIED = "dmx.timestamps.modified";
 
     // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until te bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
@@ -124,6 +124,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             List<Topic> standardTopics = new ArrayList<Topic>(); // items of interest
             Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
             if (overallTopics.isEmpty()) log.info("getStandardTopicsInTimeRange("+type+") got NO result.");
+            // Todo: Load all Entity Types to generically filter resultset
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
                 Topic in_question = resultset.next();
