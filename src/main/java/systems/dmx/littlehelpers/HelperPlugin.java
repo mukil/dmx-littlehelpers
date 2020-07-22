@@ -21,15 +21,14 @@ import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
-import static systems.dmx.core.Constants.CHILD;
-import static systems.dmx.core.Constants.PARENT;
 import systems.dmx.core.QueryResult;
-import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
 import systems.dmx.core.model.ChildTopicsModel;
 import systems.dmx.core.osgi.PluginActivator;
 import systems.dmx.core.service.Inject;
+import static systems.dmx.timestamps.Constants.CREATED;
+import static systems.dmx.timestamps.Constants.MODIFIED;
 import systems.dmx.timestamps.TimestampsService;
 import systems.dmx.workspaces.WorkspacesService;
 
@@ -48,9 +47,6 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     private Logger log = Logger.getLogger(getClass().getName());
 
     // --- DMX Time Plugin URIs
-
-    private final static String PROP_URI_CREATED  = "dmx.timestamps.created";
-    private final static String PROP_URI_MODIFIED = "dmx.timestamps.modified";
 
     private final static String WEBCLIENT_ICON_URI = "dmx.webclient.icon";
     
@@ -150,11 +146,11 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             } else if (type.equals(SEARCH_OPTION_MODIFIED)) {
                 in_memory_resources = (List<Topic>) getTopicListSortedByModificationTime(standardTopics);
             }
-            // 3) Prepare the notes page-results view-model (per type of interest)
+            // 3) Prepare the notes page-results view-mode
             for (Topic item : in_memory_resources) {
                 try {
                     item.loadChildTopics();
-                    ListTopic viewTopic = prepareViewTopicItem(item);
+                    ListTopic viewTopic = buildListTopic(item);
                     results.add(viewTopic);
                 } catch (RuntimeException rex) {
                     log.warning("Could not add fetched item to results, caused by: " + rex.getMessage());
@@ -217,8 +213,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
-                    Object one = t1.getProperty(PROP_URI_CREATED);
-                    Object two = t2.getProperty(PROP_URI_CREATED);
+                    Object one = t1.getProperty(CREATED);
+                    Object two = t2.getProperty(CREATED);
                     if ( Long.parseLong(one.toString()) < Long.parseLong(two.toString()) ) return 1;
                     if ( Long.parseLong(one.toString()) > Long.parseLong(two.toString()) ) return -1;
                 } catch (Exception nfe) {
@@ -237,8 +233,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         Collections.sort(all, new Comparator<Topic>() {
             public int compare(Topic t1, Topic t2) {
                 try {
-                    Object one = t1.getProperty(PROP_URI_MODIFIED);
-                    Object two = t2.getProperty(PROP_URI_MODIFIED);
+                    Object one = t1.getProperty(MODIFIED);
+                    Object two = t2.getProperty(MODIFIED);
                     if ( Long.parseLong(one.toString()) < Long.parseLong(two.toString()) ) return 1;
                     if ( Long.parseLong(one.toString()) > Long.parseLong(two.toString()) ) return -1;
                 } catch (Exception nfe) {
@@ -298,14 +294,14 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     public void enrichTopicModelAboutCreationTimestamp(Topic resource) {
         long created = timeService.getCreationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
-        resourceModel.set(PROP_URI_CREATED, created);
+        resourceModel.set(CREATED, created);
     }
 
     @Override
     public void enrichTopicModelAboutModificationTimestamp(Topic resource) {
         long created = timeService.getModificationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
-        resourceModel.set(PROP_URI_MODIFIED, created);
+        resourceModel.set(MODIFIED, created);
     }
 
     // --- Private Utility Methods
@@ -339,7 +335,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         return topicType.getViewConfigValue("dmx.webclient.view_config", "dmx.webclient." + setting);
     }
 
-    private ListTopic prepareViewTopicItem(Topic item) {
+    private ListTopic buildListTopic(Topic item) {
         // enrich "childs" array of topic to transfer about some basics
         enrichTopicModelAboutCreationTimestamp(item);
         enrichTopicModelAboutModificationTimestamp(item);
