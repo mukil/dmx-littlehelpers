@@ -21,12 +21,12 @@ import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
-import systems.dmx.core.QueryResult;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
 import systems.dmx.core.model.ChildTopicsModel;
 import systems.dmx.core.osgi.PluginActivator;
 import systems.dmx.core.service.Inject;
+import systems.dmx.core.service.TopicResult;
 import static systems.dmx.timestamps.Constants.CREATED;
 import static systems.dmx.timestamps.Constants.MODIFIED;
 import systems.dmx.timestamps.TimestampsService;
@@ -76,7 +76,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         searchResults.addAll(getTopicSuggestions(query, "dmx.notes.title"));
         searchResults.addAll(getTopicSuggestions(query, "dmx.accesscontrol.username"));
         // fire another global fulltext search // Note: As of 5.0 Beta-5, A Lucene Query is constructed by default in Core
-        QueryResult queryResults = dmx.queryTopicsFulltext(query, null, false);
+        TopicResult queryResults = dmx.queryTopicsFulltext(query, null, false);
         if (queryResults != null) {
             log.info("Fulltext Search for \""+query+"*\" we found \"" + queryResults.topics.size() + "\" and in "
                     + "Topicmap Name, Notes Title and Username we found \"" + searchResults.size() + "\" topics");
