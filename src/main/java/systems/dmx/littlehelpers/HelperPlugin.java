@@ -33,6 +33,9 @@ import systems.dmx.core.service.TopicResult;
 import static systems.dmx.timestamps.Constants.CREATED;
 import static systems.dmx.timestamps.Constants.MODIFIED;
 import systems.dmx.timestamps.TimestampsService;
+import static systems.dmx.topicmaps.Constants.TOPICMAP;
+import static systems.dmx.topicmaps.Constants.TOPICMAP_TYPE_URI;
+import systems.dmx.topicmaps.TopicmapsService;
 import static systems.dmx.workspaces.Constants.WORKSPACE;
 import static systems.dmx.workspaces.Constants.WORKSPACE_NAME;
 import systems.dmx.workspaces.WorkspacesService;
@@ -61,9 +64,10 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     private static final String SEARCH_OPTION_CREATED = "created";
     private static final String SEARCH_OPTION_MODIFIED = "modified";
 
-    @Inject AccessControlService acService;
-    @Inject WorkspacesService wsService;
-    @Inject TimestampsService timeService;
+    @Inject AccessControlService acl;
+    @Inject WorkspacesService workspaces;
+    @Inject TimestampsService timestamps;
+    @Inject TopicmapsService topicmaps;
 
 
 
@@ -74,6 +78,25 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         for (TopicType type : allTypes) {
             if (getViewConfig(type, "add_to_create_menu").equals(true)) {
                 result.add(type);
+            }
+        }
+        // Color: Background color
+        // Type Icon: Font Color, <div class="fa">UTF-8-String</div>
+        // Font-Awesome 4.7
+        return result;
+    }
+
+
+
+    @Override
+    public List<Topic> getTopicmapsByMaptype(String mapTypeUri) {
+        List<Topic> allMaps = dmx.getTopicsByType(TOPICMAP);
+        List<Topic> result = new ArrayList<>();
+        for (Topic t : allMaps) {
+            // Topicmap map = topicmaps.getTopicmap(t.getId(), false);
+            String topicmapType = t.getChildTopics().getString(TOPICMAP_TYPE_URI);
+            if (mapTypeUri.equals(topicmapType)) {
+                result.add(t);
             }
         }
         return result;
@@ -125,10 +148,10 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         }
         List<SearchResult> suggestions = new ArrayList<SearchResult>();
         for (Topic t : searchResults) {
-            SearchResult result = new SearchResult(t, wsService.getAssignedWorkspace(t.getId()));
+            SearchResult result = new SearchResult(t, workspaces.getAssignedWorkspace(t.getId()));
             if (!suggestions.contains(result)) {
                 log.fine("Suggesting \"" + t.getSimpleValue() + "\" topics (workspace=" +
-                        wsService.getAssignedWorkspace(t.getId())+ ")");
+                        workspaces.getAssignedWorkspace(t.getId())+ ")");
                 suggestions.add(result);
             }
         }
@@ -155,7 +178,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @GET
     @Path("/by_time/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public List<ListTopic> getStandardTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+    public List<ListTopic> getTopicsInTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
         List<ListTopic> results = new ArrayList<ListTopic>();
         try {
@@ -210,7 +233,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @GET
     @Path("/timeindex/{time_value}/{since}/{to}")
     @Produces("application/json")
-    public String getTopicIndexForTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
+    public String getIndexForTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
         //
         JSONArray results = new JSONArray();
@@ -333,14 +356,14 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
     @Override
     public void enrichTopicModelAboutCreationTimestamp(Topic resource) {
-        long created = timeService.getCreationTime(resource.getId());
+        long created = timestamps.getCreationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.set(CREATED, created);
     }
 
     @Override
     public void enrichTopicModelAboutModificationTimestamp(Topic resource) {
-        long created = timeService.getModificationTime(resource.getId());
+        long created = timestamps.getModificationTime(resource.getId());
         ChildTopicsModel resourceModel = resource.getChildTopics().getModel();
         resourceModel.set(MODIFIED, created);
     }
@@ -350,10 +373,10 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     private Collection<Topic> fetchAllTopicsInTimerange(String searchOption, long since, long to) {
         Collection<Topic> topics = null;
         if (searchOption.equals(SEARCH_OPTION_CREATED)) {
-            topics = timeService.getTopicsByCreationTime(since, to);
+            topics = timestamps.getTopicsByCreationTime(since, to);
             log.fine("> Queried " +topics.size()+ " elements CREATED since: " + new Date(since) + " and " + new Date(to));
         } else if (searchOption.equals(SEARCH_OPTION_MODIFIED)) {
-            topics = timeService.getTopicsByModificationTime(since, to);
+            topics = timestamps.getTopicsByModificationTime(since, to);
             log.fine("> Queried " +topics.size()+ " elements MODIFIED since: " + new Date(since) + " and " + new Date(to));
         } else {
             throw new RuntimeException("Invalid search parameter: set time_value either to \""
@@ -381,7 +404,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         enrichTopicModelAboutCreationTimestamp(item);
         enrichTopicModelAboutModificationTimestamp(item);
         enrichTopicModelAboutIconConfigURL(item);
-        ListTopic viewTopic = new ListTopic(item, acService, wsService);
+        ListTopic viewTopic = new ListTopic(item, acl, workspaces);
         return viewTopic;
     }
 

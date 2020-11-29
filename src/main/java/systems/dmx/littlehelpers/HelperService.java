@@ -24,9 +24,16 @@ public interface HelperService {
 
 
     /** 
-     * Load list of topic types added to the "Create Menu"
+     * Load list of topic types added to the "Create Menu".
      **/
     List<TopicType> getTopicTypesConfiguredForCreateMenu();
+
+
+    /** 
+     * Load list of topicmap topics with the given maptype URI.
+     **/
+    List<Topic> getTopicmapsByMaptype(String mapTypeUri);
+
 
 
 
@@ -61,14 +68,18 @@ public interface HelperService {
 
     
     /**
-     * Timerange Query with Customized Result Type *ListTopic*
+     * Timerange Query with Customized Result Type *ListTopic*.
+     * The type of topics included are currently hard-coded. 
+     * Todo: Generalize through selecting topic types to those configured to appear in "Create Menu".
      */
-    List<ListTopic> getStandardTopicsInTimeRange(String modifiedOrCreated, long from, long to);
+    List<ListTopic> getTopicsInTimeRange(String modifiedOrCreated, long from, long to);
 
     /**
      * Builds up a JSON string for a visual index of topics contained in the timerange.
+     * The type of topics included are currently hard-coded. 
+     * Todo: Generalize through selecting topic types to those configured to appear in "Create Menu".
      */
-    String getTopicIndexForTimeRange(String modifiedOrCreated, long from, long to);
+    String getIndexForTimeRange(String modifiedOrCreated, long from, long to);
 
 
 
