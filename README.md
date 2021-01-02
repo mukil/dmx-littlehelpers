@@ -1,7 +1,7 @@
 
 # DMX Little Helpers
 
-A plugin development helper comprised of the following functionalities:
+A plugin development helper comprised of the following functionalities. May become dmx-utils if the code improves in terms of robustness and the API in terms of clarity.
 
 Time Search API:
 
@@ -38,8 +38,10 @@ Release History
 
 **0.5.0** -- Upcoming
 
-* Adapted to be compatible with DMX 5.0
+* Adapted to be compatible with DMX 5.1
 * Released under the AGPL-3.0 license
+* Added "Open in Topicmap" endpoint
+* Code organization
 
 **0.4.0** -- Feb 02, 2018
 
@@ -47,11 +49,11 @@ Release History
 
 **0.3.0** -- Nov 15, 2016
 
-* Basically workgin
+* Basically working
 
 Copyright
 ---------
-Copyright (C) 2015, 16, 2018 Malte Reißig <malte@dmx.berlin>
-Copyright (C) 2019 DMX Systems
+Copyright (C) 2015, 16, 2018 Malte Reißig
+Copyright (C) 2019-2021 DMX Systems
 
 

@@ -36,7 +36,7 @@ import systems.dmx.workspaces.WorkspacesService;
 /**
  * @author Malte Reißig <malte@dmx.berlin>
  * @website http://git.dmx.systems/dmx-plugins/dmx-littlehelpers
- * @version 0.5-SNAPSHOT - compatible with DMX 5.0-SNAPSHOT
+ * @version 0.5-SNAPSHOT - compatible with DMX 5.1
  *
  */
 @Path("/littlehelpers")
@@ -49,7 +49,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     // --- DMX Time Plugin URIs
 
     private final static String WEBCLIENT_ICON_URI = "dmx.webclient.icon";
-    
+
     // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until te bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
 
@@ -61,6 +61,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @Inject TimestampsService timeService;
 
 
+    /** TODO: Add Generic Open Topic in Topicmap Endpoint **/ 
 
     /** ----------------------------- Command Line Util Suggestion Search ----------------------------- **/
 
@@ -169,6 +170,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @GET
     @Path("/timeindex/{time_value}/{since}/{to}")
     @Produces("application/json")
+    @Override
     public String getTopicIndexForTimeRange(@PathParam("time_value") String type, @PathParam("since") long since,
         @PathParam("to") long to) {
         //
