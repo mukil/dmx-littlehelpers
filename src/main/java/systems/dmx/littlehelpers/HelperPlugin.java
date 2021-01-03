@@ -181,8 +181,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     @Path("/topicmaps/{mapTypeUri}")
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
-    public JSONArray getTopicmaps(@PathParam("mapTypeUri") String mapTypeUri) throws URISyntaxException {
-        return DMXUtils.toJSONArray(getTopicmapsByMaptype(mapTypeUri));
+    public String getTopicmaps(@PathParam("mapTypeUri") String mapTypeUri) throws URISyntaxException {
+        return DMXUtils.toJSONArray(getTopicmapsByMaptype(mapTypeUri)).toString();
     }
 
 
