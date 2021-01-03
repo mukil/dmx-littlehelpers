@@ -1,5 +1,7 @@
 package systems.dmx.littlehelpers;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import systems.dmx.littlehelpers.model.ListTopic;
 import systems.dmx.littlehelpers.model.SearchResult;
 import java.util.logging.Logger;
@@ -19,8 +21,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
+import systems.dmx.core.Assoc;
 import static systems.dmx.core.Constants.CHILD;
 import static systems.dmx.core.Constants.PARENT;
 import systems.dmx.core.Topic;
@@ -30,11 +34,19 @@ import systems.dmx.core.model.SimpleValue;
 import systems.dmx.core.osgi.PluginActivator;
 import systems.dmx.core.service.Inject;
 import systems.dmx.core.service.TopicResult;
+import systems.dmx.core.service.Transactional;
+import systems.dmx.core.util.DMXUtils;
 import static systems.dmx.timestamps.Constants.CREATED;
 import static systems.dmx.timestamps.Constants.MODIFIED;
 import systems.dmx.timestamps.TimestampsService;
+import static systems.dmx.topicmaps.Constants.PAN_X;
+import static systems.dmx.topicmaps.Constants.PAN_Y;
 import static systems.dmx.topicmaps.Constants.TOPICMAP;
 import static systems.dmx.topicmaps.Constants.TOPICMAP_TYPE_URI;
+import static systems.dmx.topicmaps.Constants.VISIBILITY;
+import static systems.dmx.topicmaps.Constants.X;
+import static systems.dmx.topicmaps.Constants.Y;
+import static systems.dmx.topicmaps.Constants.ZOOM;
 import systems.dmx.topicmaps.TopicmapsService;
 import static systems.dmx.workspaces.Constants.WORKSPACE;
 import static systems.dmx.workspaces.Constants.WORKSPACE_NAME;
@@ -56,7 +68,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     // --- DMX Time Plugin URIs
 
     private final static String WEBCLIENT_ICON_URI = "dmx.webclient.icon";
-    
+    public static final String WEBCLIENT_SLUG = "/systems.dmx.webclient/#";
+
     // --- Hardcoded Type Cache (### Fixme: Lags updates of View Config Icon URL until bundle is refreshed)
     private HashMap<String, TopicType> viewConfigTypeCache = new HashMap<String, TopicType>();
 
@@ -84,8 +97,6 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         // Font-Awesome 4.7
         return result;
     }
-
-
 
     @Override
     public List<Topic> getTopicmapsByMaptype(String mapTypeUri) {
@@ -124,7 +135,57 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     }
 
 
-    /** TODO: Add Generic Open Topic in Topicmap Endpoint **/ 
+
+    /** ----------------------------- Reveal Topic in Topicmap Endpoint ----------------------------- **/
+
+    @GET
+    @Path("/open-in-map/{topicmapId}/{topicId}")
+    @Produces(MediaType.TEXT_HTML)
+    @Transactional
+    public Response showTopicInTopicmap(@PathParam("topicmapId") long topicmapId, @PathParam("topicId") long topicId) throws URISyntaxException {
+        if (topicmapId != -1) {
+            Topic map = dmx.getTopic(topicmapId);
+            if (map.getTypeUri().equals(TOPICMAP)) {
+                // Translate Topicmap so Topic is in current viewport
+                setTopicPositionInBrowserViewport(topicmapId, topicId);
+                return Response.seeOther(new URI(WEBCLIENT_SLUG + "/topicmap/" + topicmapId + "/topic/" + topicId)).build();
+            }
+        }
+        return Response.seeOther(new URI(WEBCLIENT_SLUG + "/topicmap/" + topicmapId)).build();
+    }
+
+    @Transactional
+    private void setTopicPositionInBrowserViewport(long topicmapId, long topicId) {
+        int x, y, mapX, mapY;
+        Topic topicmap = dmx.getTopic(topicmapId);
+        double zoom = (Double) topicmap.getProperty(ZOOM);
+        Assoc tc = topicmaps.getTopicMapcontext(topicmapId, topicId);
+        if (tc == null) { // Topic is NOT part of the map
+            mapX = (Integer) topicmap.getProperty(PAN_X);
+            mapY = (Integer) topicmap.getProperty(PAN_Y);
+            topicmaps.addTopicToTopicmap(topicmap.getId(), topicId, mapX + 300, mapY + 300, true);
+        } else { // Topic IS part of the map
+            x = (Integer) tc.getProperty(X);
+            y = (Integer) tc.getProperty(Y);
+            boolean visibility = (Boolean) tc.getProperty(VISIBILITY);
+            if (!visibility) {
+                tc.setProperty(VISIBILITY, true, false);
+            }
+            if (acl.getUsername() != null) {
+                topicmaps.setTopicmapViewport(topicmapId, 300 - x, 200 - y, zoom);
+            }
+        }
+    }
+
+    @GET
+    @Path("/topicmaps/{mapTypeUri}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Transactional
+    public JSONArray getTopicmaps(@PathParam("mapTypeUri") String mapTypeUri) throws URISyntaxException {
+        return DMXUtils.toJSONArray(getTopicmapsByMaptype(mapTypeUri));
+    }
+
+
 
     /** ----------------------------- Command Line Util Suggestion Search ----------------------------- **/
 
