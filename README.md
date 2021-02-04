@@ -31,7 +31,7 @@ Sorting utilities:
 Licensing
 ---------
 
-DMX Little Helpers is available freely under the GNU Affero General Public License, version 3 or later (see [License](https://git.dmx.systems/dmx-plugins/dmx-sign-up/-/blob/master/LICENSE)).
+DMX Little Helpers is available freely under the GNU Affero General Public License, version 3 or later (see [License](https://git.dmx.systems/dmx-plugins/dmx-littlehelpers/-/blob/master/LICENSE)).
 
 Release History
 ---------------
