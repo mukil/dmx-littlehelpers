@@ -36,9 +36,11 @@ import systems.dmx.core.service.Inject;
 import systems.dmx.core.service.TopicResult;
 import systems.dmx.core.service.Transactional;
 import systems.dmx.core.util.DMXUtils;
+import systems.dmx.timestamps.TimestampsService;
+import systems.dmx.topicmaps.TopicmapsService;
+import systems.dmx.workspaces.WorkspacesService;
 import static systems.dmx.timestamps.Constants.CREATED;
 import static systems.dmx.timestamps.Constants.MODIFIED;
-import systems.dmx.timestamps.TimestampsService;
 import static systems.dmx.topicmaps.Constants.PAN_X;
 import static systems.dmx.topicmaps.Constants.PAN_Y;
 import static systems.dmx.topicmaps.Constants.TOPICMAP;
@@ -47,11 +49,12 @@ import static systems.dmx.topicmaps.Constants.VISIBILITY;
 import static systems.dmx.topicmaps.Constants.X;
 import static systems.dmx.topicmaps.Constants.Y;
 import static systems.dmx.topicmaps.Constants.ZOOM;
-import systems.dmx.topicmaps.TopicmapsService;
 import static systems.dmx.workspaces.Constants.WORKSPACE;
 import static systems.dmx.workspaces.Constants.WORKSPACE_NAME;
-import systems.dmx.workspaces.WorkspacesService;
-
+import static systems.dmx.datetime.Constants.DATE;
+import static systems.dmx.datetime.Constants.DAY;
+import static systems.dmx.datetime.Constants.MONTH;
+import static systems.dmx.datetime.Constants.YEAR;
 
 /**
  * @author Malte Reißig <malte@dmx.berlin>
@@ -134,8 +137,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
         return realWs;
     }
 
-
-
+    
+    
     /** ----------------------------- Reveal Topic in Topicmap Endpoint ----------------------------- **/
 
     @GET
@@ -184,7 +187,45 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     public String getTopicmaps(@PathParam("mapTypeUri") String mapTypeUri) throws URISyntaxException {
         return DMXUtils.toJSONArray(getTopicmapsByMaptype(mapTypeUri)).toString();
     }
+   
 
+
+    /** ----------------------------- Create Date/Time Date Topic ----------------------------------- **/
+
+    public ChildTopicsModel setDateTopic(ChildTopicsModel cm, Date date, String assocTypeUri) {
+        // Create new child topicsmodel for date topic
+        ChildTopicsModel child = mf.newChildTopicsModel();
+        child.set(DAY, date.getDate());
+        child.set(MONTH, date.getMonth() + 1);
+        child.set(YEAR, date.getYear() + 1900);
+        // set date on childTopicsModel
+        cm.set(DATE + "#" + assocTypeUri, mf.newTopicModel(DATE, child));
+        return cm;
+    }
+
+
+
+    /** ----------------------------- Filter list of topics by topicmapId ------------------------ **/
+    
+    // @Override
+    public List<Topic> applyTopicmapFilter(List<Topic> searchResults, long topicmapId) {
+        List<Topic> filteredResults = new ArrayList<Topic>();
+        if (topicmapId > 0 && !searchResults.isEmpty()) {
+            log.info("> Filter list of " + searchResults.size() + " uniqueResults about topicmap: " + topicmapId);
+            for (Topic searchResult : searchResults) {
+                if (isTopicVisibleInTopicmap(topicmapId, searchResult.getId())) {
+                    filteredResults.add(searchResult);
+                }
+            }
+        }
+        return filteredResults;
+    }
+
+    // @Override
+    public boolean isTopicVisibleInTopicmap(long topicmapId, long topicId) {
+        Assoc mapContext = topicmaps.getTopicMapcontext(topicmapId, topicId);
+        return (mapContext == null) ? false : (Boolean) mapContext.getProperty(VISIBILITY);
+    }
 
 
     /** ----------------------------- Command Line Util Suggestion Search ----------------------------- **/

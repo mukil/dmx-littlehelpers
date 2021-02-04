@@ -1,11 +1,13 @@
 package systems.dmx.littlehelpers;
 
 
+import java.util.Date;
 import systems.dmx.littlehelpers.model.ListTopic;
 import systems.dmx.littlehelpers.model.SearchResult;
 import java.util.List;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
+import systems.dmx.core.model.ChildTopicsModel;
 
 /**
  * A plugin-service covering generic utilities in DMX plugin development.
@@ -35,6 +37,14 @@ public interface HelperService {
     List<Topic> getTopicmapsByMaptype(String mapTypeUri);
 
 
+    /** 
+     * Converts values of a *java.calendar.Date* object into a *dmx.datetime.date* topic.
+     * @param cm
+     * @param date
+     * @param assocTypeUri
+     * @return 
+     */
+    ChildTopicsModel setDateTopic(ChildTopicsModel cm, Date date, String assocTypeUri);
 
 
     /** 

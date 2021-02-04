@@ -36,6 +36,11 @@ DMX Little Helpers is available freely under the GNU Affero General Public Licen
 Release History
 ---------------
 
+**0.6.0** -- Upcoming
+
+* Add date time topic helper method (builder)
+* Add '/open-in-map/{topicmapId}/{topicId}' endpoint
+
 **0.5.0** -- Jan 03, 2021
 
 * Adapted to be compatible with DMX 5.1
