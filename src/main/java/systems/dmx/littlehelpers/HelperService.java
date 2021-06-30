@@ -21,7 +21,7 @@ public interface HelperService {
     /** 
      * Get a workspace topic with the given name.
      */
-    Topic getWorkspaceByName(String name);
+    Topic getFirstWorkspaceByName(String name);
 
 
 

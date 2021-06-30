@@ -23,8 +23,8 @@ public class SearchResult implements JSONEnabled {
     public SearchResult (Topic topic, Topic workspace) {
         this.item = topic;
         this.workspace = workspace;
-        this.workspaceMode = workspace.loadChildTopics("dm4.workspaces.sharing_mode")
-                .getChildTopics().getString("dm4.workspaces.sharing_mode");
+        this.workspaceMode = workspace.loadChildTopics("dmx.workspaces.sharing_mode")
+                .getChildTopics().getString("dmx.workspaces.sharing_mode");
     }
     
     public JSONObject toJSON() {

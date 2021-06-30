@@ -14,12 +14,28 @@ Parameter `time_value` can be either `created` or `modified`.
 
 Results of this API are each enriched about an icon path and their `created` and `modified` timestamps.
 
-Topic query delivering a list of `SearchResult` (custom ViewModel):
+Topic search API (delivering a list of `SearchResult`):
 
 - `/suggest/topics/{input}` (queries `Note Title`, `Topicmaps Name` and `Username`)
 - `/suggest/topics/{input}/{typeUri}`
+ 
+`Search Result` of this endpoint _are_ each enriched about their `creator (username)` and `workspace` info.
 
-`Search Result` of this endpoint are each enriched about their `username` and `workspace` info.
+Topicmaps utilities:
+
+- getTopicmapsByMaptype
+
+Datetime utilities:
+
+- setDateTopic(ChildTopicsModel cm, Date date, String assocTypeUri)
+
+Topic Type utilities:
+
+- getTopicTypesConfiguredForCreateMenu
+
+Workspace utilities:
+
+- getFirstWorkspaceByName
 
 Sorting utilities:
 
@@ -36,10 +52,14 @@ DMX Little Helpers is available freely under the GNU Affero General Public Licen
 Release History
 ---------------
 
-**0.6.0** -- Upcoming
+**0.6.0** -- Jun 30, 2021
 
 * Add date time topic helper method (builder)
 * Add '/open-in-map/{topicmapId}/{topicId}' endpoint
+* Adapted to be compatible with DMX 5.2
+* Fixes outdated URI (DM4) in SearchResult model class 
+* Helper method to store java Date objects as topics
+* Helpers to fetch types, workspaces and topicmaps by type or name
 
 **0.5.0** -- Jan 03, 2021
 

@@ -118,9 +118,8 @@ public class HelperPlugin extends PluginActivator implements HelperService {
 
 
     @Override
-    public Topic getWorkspaceByName(String name) {
+    public Topic getFirstWorkspaceByName(String name) {
         Topic realWs = null;
-        // ### It worked once but does this still work? (depends if workspace names are indexed KEY)
         Topic ws = dmx.getTopicByValue(WORKSPACE_NAME, new SimpleValue(name));
         if (ws == null) {
             // double check if it *really* does not exist yet
@@ -187,7 +186,7 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     public String getTopicmaps(@PathParam("mapTypeUri") String mapTypeUri) throws URISyntaxException {
         return DMXUtils.toJSONArray(getTopicmapsByMaptype(mapTypeUri)).toString();
     }
-   
+
 
 
     /** ----------------------------- Create Date/Time Date Topic ----------------------------------- **/
