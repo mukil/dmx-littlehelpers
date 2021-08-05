@@ -23,19 +23,19 @@ Topic search API (delivering a list of `SearchResult`):
 
 Topicmaps utilities:
 
-- getTopicmapsByMaptype
+- `getTopicmapsByMaptype`
 
 Datetime utilities:
 
-- setDateTopic(ChildTopicsModel cm, Date date, String assocTypeUri)
+- `setDateTopic(ChildTopicsModel cm, Date date, String assocTypeUri)`
 
 Topic Type utilities:
 
-- getTopicTypesConfiguredForCreateMenu
+- `getTopicTypesConfiguredForCreateMenu`
 
 Workspace utilities:
 
-- getFirstWorkspaceByName
+- `getFirstWorkspaceByName`
 
 Sorting utilities:
 
@@ -52,7 +52,7 @@ DMX Little Helpers is available freely under the GNU Affero General Public Licen
 Release History
 ---------------
 
-**0.6.0** -- Jun 30, 2021
+**0.6.0** -- Aug 05, 2021
 
 * Add date time topic helper method (builder)
 * Add '/open-in-map/{topicmapId}/{topicId}' endpoint
