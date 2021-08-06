@@ -52,6 +52,10 @@ DMX Little Helpers is available freely under the GNU Affero General Public Licen
 Release History
 ---------------
 
+**0.6.1** -- Aug 06, 2021
+
+Maintenance release fixing the version number in `pom.xml`
+
 **0.6.0** -- Aug 05, 2021
 
 * Add date time topic helper method (builder)
