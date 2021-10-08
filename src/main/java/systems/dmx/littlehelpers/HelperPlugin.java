@@ -20,13 +20,19 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import static javax.tools.Diagnostic.Kind.NOTE;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.codehaus.jettison.json.JSONArray;
 import systems.dmx.accesscontrol.AccessControlService;
+import static systems.dmx.accesscontrol.Constants.USERNAME;
+import static systems.dmx.bookmarks.Constants.BOOKMARK;
+import static systems.dmx.contacts.Constants.ORGANIZATION;
+import static systems.dmx.contacts.Constants.PERSON;
 import systems.dmx.core.Assoc;
 import static systems.dmx.core.Constants.CHILD;
 import static systems.dmx.core.Constants.PARENT;
+import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
 import systems.dmx.core.TopicType;
 import systems.dmx.core.model.ChildTopicsModel;
@@ -55,6 +61,11 @@ import static systems.dmx.datetime.Constants.DATE;
 import static systems.dmx.datetime.Constants.DAY;
 import static systems.dmx.datetime.Constants.MONTH;
 import static systems.dmx.datetime.Constants.YEAR;
+import static systems.dmx.files.Constants.FILE;
+import static systems.dmx.files.Constants.FOLDER;
+import static systems.dmx.notes.Constants.NOTE_TITLE;
+import static systems.dmx.tags.Constants.TAG;
+import static systems.dmx.topicmaps.Constants.TOPICMAP_NAME;
 
 /**
  * @author Malte Reißig <malte@dmx.berlin>
@@ -237,9 +248,9 @@ public class HelperPlugin extends PluginActivator implements HelperService {
                 + "suggestions, please provide at least two characters.");
         // ### Todo authorize request (maybe restrict to logged in users only)
         // fire three explicit searches: for topicmap name, usernames and note-titles
-        List<Topic> searchResults = getTopicSuggestions(query, "dmx.topicmaps.name");
-        searchResults.addAll(getTopicSuggestions(query, "dmx.notes.title"));
-        searchResults.addAll(getTopicSuggestions(query, "dmx.accesscontrol.username"));
+        List<Topic> searchResults = getTopicSuggestions(query, TOPICMAP_NAME);
+        searchResults.addAll(getTopicSuggestions(query, NOTE_TITLE));
+        searchResults.addAll(getTopicSuggestions(query, USERNAME));
         // fire another global fulltext search // Note: As of 5.0 Beta-5, A Lucene Query is constructed by default in Core
         TopicResult queryResults = dmx.queryTopicsFulltext(query, null, false);
         if (queryResults != null) {
@@ -291,14 +302,9 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             // Todo: Load all Entity Types (with add_to_create_menu=true) to generically filter resultset
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
-                Topic in_question = resultset.next();
-                if (in_question.getTypeUri().equals("dmx.notes.note") ||
-                    in_question.getTypeUri().equals("dmx.files.file") ||
-                    in_question.getTypeUri().equals("dmx.files.folder") ||
-                    in_question.getTypeUri().equals("dmx.contacts.person") ||
-                    in_question.getTypeUri().equals("dmx.contacts.organization") ||
-                    in_question.getTypeUri().equals("dmx.bookmarks.bookmark")) {
-                    standardTopics.add(in_question);
+                Topic topic = resultset.next();
+                if (isSupportedType(topic)) {
+                    standardTopics.add(topic);
                 } else {
                     // log.info("> Result \"" +in_question.getSimpleValue()+ "\" (" +in_question.getTypeUri()+ ")");
                 }
@@ -345,15 +351,10 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             Collection<Topic> overallTopics = fetchAllTopicsInTimerange(type, since, to);
             Iterator<Topic> resultset = overallTopics.iterator();
             while (resultset.hasNext()) {
-                Topic in_question = resultset.next();
-                if (in_question.getTypeUri().equals("dmx.notes.note") ||
-                    in_question.getTypeUri().equals("dmx.files.file") ||
-                    in_question.getTypeUri().equals("dmx.files.folder") ||
-                    in_question.getTypeUri().equals("dmx.contacts.person") ||
-                    in_question.getTypeUri().equals("dmx.contacts.organization") ||
-                    in_question.getTypeUri().equals("dmx.bookmarks.bookmark")) {
+                Topic topic = resultset.next();
+                if (isSupportedType(topic)) {
                     // log.info("> " +in_question.getSimpleValue()+ " of type \"" +in_question.getTypeUri()+ "\"");
-                    standardTopics.add(in_question);
+                    standardTopics.add(topic);
                 }
             }
             log.info(type+" Topic Index for timerange query found " + standardTopics.size() + " standard topics (" + overallTopics.size() + " overall)");
@@ -369,6 +370,15 @@ public class HelperPlugin extends PluginActivator implements HelperService {
             throw new RuntimeException("something went wrong", e);
         }
         return results.toString();
+    }
+
+    private boolean isSupportedType(Topic topic) {
+        return (topic.getTypeUri().equals(NOTE) ||
+                    topic.getTypeUri().equals(FILE) ||
+                    topic.getTypeUri().equals(FOLDER) ||
+                    topic.getTypeUri().equals(PERSON) ||
+                    topic.getTypeUri().equals(ORGANIZATION) ||
+                    topic.getTypeUri().equals(BOOKMARK));
     }
 
     /** ---------------------------------- Sorting Utils ----------------------------------- **/
@@ -501,11 +511,16 @@ public class HelperPlugin extends PluginActivator implements HelperService {
     }
 
     private ListTopic buildListTopic(Topic item) {
-        // enrich "childs" array of topic to transfer about some basics
+        // add timestampes and icon config url
         enrichTopicModelAboutCreationTimestamp(item);
         enrichTopicModelAboutModificationTimestamp(item);
         enrichTopicModelAboutIconConfigURL(item);
+        // add creator and workspace name
         ListTopic viewTopic = new ListTopic(item, acl, workspaces);
+        // add keywords (for bookmarks only)
+        if (item.getTypeUri().equals(BOOKMARK)) {
+            viewTopic.includeTags(item);
+        }
         return viewTopic;
     }
 

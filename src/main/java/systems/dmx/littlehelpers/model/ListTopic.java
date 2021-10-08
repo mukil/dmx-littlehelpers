@@ -1,12 +1,17 @@
 package systems.dmx.littlehelpers.model;
 
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import systems.dmx.accesscontrol.AccessControlService;
 import systems.dmx.core.JSONEnabled;
+import systems.dmx.core.RelatedTopic;
 import systems.dmx.core.Topic;
+import systems.dmx.core.model.ChildTopicsModel;
+import systems.dmx.core.util.DMXUtils;
+import static systems.dmx.tags.Constants.TAG;
 import systems.dmx.workspaces.WorkspacesService;
 
 /**
@@ -24,6 +29,17 @@ public final class ListTopic implements JSONEnabled {
         topic = item.toJSON();
         setUsername(ac.getCreator(item.getId()));
         setWorkspace(ws.getAssignedWorkspace(item.getId()));
+    }
+
+    public void includeTags(Topic item) {
+        List<RelatedTopic> tags = item.getRelatedTopics(null, null, null, TAG);
+        if (tags != null) {
+            try {
+                topic.put("tags", DMXUtils.toJSONArray(tags));
+            } catch (JSONException ex) {
+                Logger.getLogger(ListTopic.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public void setUsername(String username) {
